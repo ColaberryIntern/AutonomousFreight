@@ -6,6 +6,7 @@ export interface GatewayRuntimeConfig {
   logLevel: string;
   rateLimitWindowMs: number;
   rateLimitMax: number;
+  mfaKek?: string;
 }
 
 export function loadGatewayConfig(env: NodeJS.ProcessEnv = process.env): GatewayRuntimeConfig {
@@ -15,7 +16,8 @@ export function loadGatewayConfig(env: NodeJS.ProcessEnv = process.env): Gateway
   if (!jwtAccessSecret || jwtAccessSecret.length < 16) {
     throw new Error('JWT_ACCESS_SECRET is required and must be at least 16 chars');
   }
-  return {
+  const mfaKek = env['MFA_KEK'];
+  const base: GatewayRuntimeConfig = {
     port: Number(env['GATEWAY_PORT'] ?? 3000),
     databaseUrl,
     jwtAccessSecret,
@@ -24,4 +26,6 @@ export function loadGatewayConfig(env: NodeJS.ProcessEnv = process.env): Gateway
     rateLimitWindowMs: Number(env['RATE_LIMIT_WINDOW_MS'] ?? 60_000),
     rateLimitMax: Number(env['RATE_LIMIT_MAX'] ?? 120),
   };
+  if (mfaKek && mfaKek.length >= 16) base.mfaKek = mfaKek;
+  return base;
 }

@@ -1,6 +1,8 @@
 import { Pool } from 'pg';
 import { CarrierRepository } from '../../carrier/src/repo/carrierRepository';
+import { ComplianceRepository } from '../../compliance/src/repo/complianceRepository';
 import { InMemoryEventBus } from '../../events/src/inMemoryBus';
+import type { EventBus } from '../../events/src/types';
 import {
   CaptureEmailDriver,
   PreferencesRepository,
@@ -30,13 +32,14 @@ async function main(): Promise<void> {
   const pool = new Pool({ connectionString: cfg.databaseUrl });
   await new UserRepository(pool).runMigrations();
   await new CarrierRepository(pool).runMigrations();
+  await new ComplianceRepository(pool).runMigrations();
   await new PreferencesRepository(pool).runMigrations();
 
-  const bus = new InMemoryEventBus();
+  const bus: EventBus = new InMemoryEventBus();
   const driver = buildEmailDriver(process.env);
   startNotificationService({ pool, bus, driver });
 
-  const { app } = buildGateway({
+  const gwCfg: Parameters<typeof buildGateway>[0] = {
     pool,
     jwtSecret: cfg.jwtAccessSecret,
     jwtTtl: cfg.jwtAccessTtl,
@@ -44,9 +47,11 @@ async function main(): Promise<void> {
     rateLimitWindowMs: cfg.rateLimitWindowMs,
     rateLimitMax: cfg.rateLimitMax,
     bus,
-  });
+  };
+  if (cfg.mfaKek) gwCfg.mfaKek = cfg.mfaKek;
+  const { app } = buildGateway(gwCfg);
   app.listen(cfg.port, () => {
-    console.warn(`[gateway] listening on :${cfg.port}`);
+    console.warn(`[gateway] listening on :${cfg.port} (mfa=${cfg.mfaKek ? 'on' : 'off'})`);
   });
 }
 

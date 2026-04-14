@@ -21,6 +21,7 @@ export interface GatewayConfig {
   rateLimitWindowMs: number;
   rateLimitMax: number;
   bus?: EventBus;
+  mfaKek?: string;
 }
 
 export interface BuiltGateway {
@@ -61,11 +62,16 @@ export function buildGateway(cfg: GatewayConfig): BuiltGateway {
   app.use(metricsMiddleware(metrics));
   app.use(buildRateLimit({ windowMs: cfg.rateLimitWindowMs, max: cfg.rateLimitMax }));
 
-  const userService = buildUserService(
-    cfg.bus
-      ? { pool: cfg.pool, jwtSecret: cfg.jwtSecret, jwtTtl: cfg.jwtTtl, bus: cfg.bus }
-      : { pool: cfg.pool, jwtSecret: cfg.jwtSecret, jwtTtl: cfg.jwtTtl },
-  );
+  const userServiceDeps: {
+    pool: Pool;
+    jwtSecret: string;
+    jwtTtl: string;
+    bus?: EventBus;
+    mfaKek?: string;
+  } = { pool: cfg.pool, jwtSecret: cfg.jwtSecret, jwtTtl: cfg.jwtTtl };
+  if (cfg.bus) userServiceDeps.bus = cfg.bus;
+  if (cfg.mfaKek) userServiceDeps.mfaKek = cfg.mfaKek;
+  const userService = buildUserService(userServiceDeps);
   app.use(userService);
 
   app.use(buildCarrierRouter({ pool: cfg.pool, jwtSecret: cfg.jwtSecret }));
