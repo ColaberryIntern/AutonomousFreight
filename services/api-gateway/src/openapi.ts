@@ -63,6 +63,85 @@ export function buildOpenApiDoc(): OpenApiDoc {
           },
         },
       },
+      '/api/v1/shipments': {
+        get: {
+          summary: 'List shipments',
+          tags: ['carrier'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Shipments list' },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+      },
+      '/api/v1/carriers': {
+        get: {
+          summary: 'List carriers (?active=false to include inactive)',
+          tags: ['carrier'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Carriers list' },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+      },
+      '/api/v1/carriers/{id}/compliance': {
+        get: {
+          summary: 'Carrier compliance snapshot + risk score (admin/broker/auditor)',
+          tags: ['compliance'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Compliance snapshot' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+            '404': { description: 'No compliance row' },
+          },
+        },
+      },
+      '/api/v1/compliance/expiring': {
+        get: {
+          summary: 'Artifacts expiring within N days (admin/auditor)',
+          tags: ['compliance'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Expiring artifacts' },
+            '400': { description: 'Invalid within_days' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+          },
+        },
+      },
+      '/auth/mfa/enroll': {
+        post: {
+          summary: 'Enroll TOTP MFA (returns secret + otpauth URI)',
+          tags: ['auth'],
+          security: [{ bearer: [] }],
+          responses: { '200': { description: 'Enrolled' }, '401': { description: 'Unauthorized' } },
+        },
+      },
+      '/auth/mfa/verify': {
+        post: {
+          summary: 'Verify TOTP code + enable MFA',
+          tags: ['auth'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Enabled' },
+            '400': { description: 'Invalid input' },
+            '401': { description: 'Invalid code' },
+            '409': { description: 'Not enrolled' },
+          },
+        },
+      },
+      '/auth/mfa/login': {
+        post: {
+          summary: 'MFA-required login (email + password + code)',
+          tags: ['auth'],
+          responses: {
+            '200': { description: 'Token issued' },
+            '401': { description: 'Invalid credentials' },
+          },
+        },
+      },
       '/api/v1/shipments/{id}/select-carrier': {
         post: {
           summary: 'Rank carrier bids for a quoting shipment',

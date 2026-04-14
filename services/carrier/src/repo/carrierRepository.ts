@@ -43,6 +43,50 @@ export class CarrierRepository {
     };
   }
 
+  async listShipments(limit = 50): Promise<ShipmentRecord[]> {
+    const r = await this.pool.query<{
+      id: string;
+      origin: string;
+      destination: string;
+      distance_miles: number;
+      status: ShipmentRecord['status'];
+    }>(
+      `SELECT id, origin, destination, distance_miles, status
+       FROM shipments ORDER BY id LIMIT $1`,
+      [limit],
+    );
+    return r.rows.map((row) => ({
+      id: row.id,
+      origin: row.origin,
+      destination: row.destination,
+      distanceMiles: row.distance_miles,
+      status: row.status,
+    }));
+  }
+
+  async listCarriers(
+    activeOnly = true,
+    limit = 100,
+  ): Promise<Array<{ id: string; name: string; rating: number; active: boolean }>> {
+    const r = await this.pool.query<{
+      id: string;
+      name: string;
+      rating: string;
+      active: boolean;
+    }>(
+      `SELECT id, name, rating, active FROM carriers
+       ${activeOnly ? 'WHERE active = TRUE' : ''}
+       ORDER BY name LIMIT $1`,
+      [limit],
+    );
+    return r.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      rating: Number(row.rating),
+      active: row.active,
+    }));
+  }
+
   async listActiveBidsForShipment(shipmentId: string): Promise<CarrierBid[]> {
     const result = await this.pool.query<{
       carrier_id: string;

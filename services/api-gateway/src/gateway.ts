@@ -13,6 +13,28 @@ import { buildOpenApiDoc } from './openapi';
 
 const openApiDoc = buildOpenApiDoc();
 
+const SWAGGER_HTML = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Autonomous Freight API</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+    <style>body{margin:0}</style>
+  </head>
+  <body>
+    <div id="swagger"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+    <script>
+      window.ui = SwaggerUIBundle({
+        url: '/openapi.json',
+        dom_id: '#swagger',
+        deepLinking: true,
+        persistAuthorization: true,
+      });
+    </script>
+  </body>
+</html>`;
+
 export interface GatewayConfig {
   pool: Pool;
   jwtSecret: string;
@@ -42,6 +64,11 @@ export function buildGateway(cfg: GatewayConfig): BuiltGateway {
 
   app.get('/openapi.json', (_req: Request, res: Response) => {
     res.status(200).json(openApiDoc);
+  });
+
+  app.get('/docs', (_req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.status(200).send(SWAGGER_HTML);
   });
 
   app.get('/metrics', (_req: Request, res: Response) => {
