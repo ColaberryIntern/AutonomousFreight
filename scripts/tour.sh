@@ -37,9 +37,9 @@ run "curl -s -w '\nHTTP %{http_code}\n' -H \"Authorization: Bearer \$TOKEN\" $BA
 
 step "5/10 Same route after admin login" "Register admin + login + retry — should return 200."
 curl -s -X POST $BASE/auth/register -H 'Content-Type: application/json' \
-  -d '{"email":"tour-admin@af.test","password":"AdminPass99","role":"admin"}' >/dev/null || true
+  -d '{"email":"tour-admin@af.test","password":"AdminPassword99","role":"admin"}' >/dev/null || true
 ATOKEN=$(curl -s -X POST $BASE/auth/login -H 'Content-Type: application/json' \
-  -d '{"email":"tour-admin@af.test","password":"AdminPass99"}' | jq -r .accessToken)
+  -d '{"email":"tour-admin@af.test","password":"AdminPassword99"}' | jq -r .accessToken)
 run "curl -s -w '\nHTTP %{http_code}\n' -H \"Authorization: Bearer \$ATOKEN\" $BASE/admin/ping"
 
 step "6/10 Carrier ranking (Sprint 3)" "Seeded shipment with 3 bids — scored deterministically by directive 030 (0.4*cost + 0.3*distance + 0.3*rating)."
