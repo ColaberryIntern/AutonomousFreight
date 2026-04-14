@@ -5,6 +5,8 @@ import { InMemoryEventBus } from '../../events/src/inMemoryBus';
 import type { EventBus } from '../../events/src/types';
 import {
   CaptureEmailDriver,
+  GmailEmailDriver,
+  type GmailConfig,
   PreferencesRepository,
   SmtpEmailDriver,
   startNotificationService,
@@ -20,6 +22,15 @@ import { buildGateway } from './gateway';
 function buildEmailDriver(env: NodeJS.ProcessEnv): EmailDriver {
   const choice = env['EMAIL_DRIVER'] ?? 'smtp';
   if (choice === 'capture') return new CaptureEmailDriver();
+  if (choice === 'gmail') {
+    const cfg: GmailConfig = {
+      clientId: env['GMAIL_CLIENT_ID'] ?? '',
+      clientSecret: env['GMAIL_CLIENT_SECRET'] ?? '',
+      refreshToken: env['GMAIL_REFRESH_TOKEN'] ?? '',
+    };
+    if (env['SMTP_FROM']) cfg.from = env['SMTP_FROM'];
+    return new GmailEmailDriver(cfg);
+  }
   const user = env['SMTP_USER'];
   const password = env['SMTP_PASSWORD'];
   const base = {

@@ -25,5 +25,6 @@ export function startNotificationService(
 
 export { CaptureEmailDriver } from './drivers/captureEmailDriver';
 export { SmtpEmailDriver, type SmtpConfig } from './drivers/smtpEmailDriver';
+export { GmailEmailDriver, type GmailConfig } from './drivers/gmailEmailDriver';
 export type { EmailDriver, EmailMessage } from './drivers/emailDriver';
 export { PreferencesRepository } from './repo/preferencesRepository';
