@@ -7,6 +7,7 @@ import { CompliancePage } from './components/CompliancePage';
 import { Login } from './components/Login';
 import { OpsHome } from './components/OpsHome';
 import { Queue } from './components/Queue';
+import { Quotes } from './components/Quotes';
 import { Shipments } from './components/Shipments';
 import { ShipmentDrawer } from './components/ShipmentDrawer';
 import { styles } from './styles';
@@ -14,6 +15,7 @@ import type { User } from './types';
 
 type View =
   | 'ops'
+  | 'quotes'
   | 'queue'
   | 'shipments'
   | 'carriers'
@@ -30,6 +32,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { id: 'ops', label: 'Operations' },
+  { id: 'quotes', label: 'Quotes' },
   { id: 'queue', label: 'Queue' },
   { id: 'shipments', label: 'Shipments' },
   { id: 'carriers', label: 'Carriers' },
@@ -106,12 +109,9 @@ export function App(): React.ReactElement {
         </div>
         <div style={styles.content}>
           {view === 'ops' && <OpsHome token={token} isAdmin={isAdmin} />}
+          {view === 'quotes' && <Quotes token={token} canApprove={canApprove} />}
           {view === 'queue' && (
-            <Queue
-              token={token}
-              canApprove={canApprove}
-              onDetail={(id) => setQueueInspect(id)}
-            />
+            <Queue token={token} canApprove={canApprove} onDetail={(id) => setQueueInspect(id)} />
           )}
           {view === 'shipments' && <Shipments token={token} canApprove={canApprove} />}
           {view === 'carriers' && <Carriers token={token} canSeeCompliance={canSeeCompliance} />}

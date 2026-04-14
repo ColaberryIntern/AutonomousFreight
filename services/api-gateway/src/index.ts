@@ -10,6 +10,9 @@ import {
   startNotificationService,
   type EmailDriver,
 } from '../../notifications/src/index';
+import { startQuotingAgentLoop } from '../../rfq/src/agent/quotingAgent';
+import { RfqRepository } from '../../rfq/src/repo/rfqRepository';
+import { AuditRepository } from '../../user/src/repo/auditRepository';
 import { UserRepository } from '../../user/src/repo/userRepository';
 import { loadGatewayConfig } from './config';
 import { buildGateway } from './gateway';
@@ -34,10 +37,15 @@ async function main(): Promise<void> {
   await new CarrierRepository(pool).runMigrations();
   await new ComplianceRepository(pool).runMigrations();
   await new PreferencesRepository(pool).runMigrations();
+  await new RfqRepository(pool).runMigrations();
 
   const bus: EventBus = new InMemoryEventBus();
   const driver = buildEmailDriver(process.env);
   startNotificationService({ pool, bus, driver });
+
+  const rfqRepo = new RfqRepository(pool);
+  const audit = new AuditRepository(pool);
+  startQuotingAgentLoop({ repo: rfqRepo, audit, bus }, 5000);
 
   const gwCfg: Parameters<typeof buildGateway>[0] = {
     pool,

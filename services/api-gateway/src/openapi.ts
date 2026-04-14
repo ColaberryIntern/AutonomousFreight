@@ -143,6 +143,78 @@ export function buildOpenApiDoc(): OpenApiDoc {
           },
         },
       },
+      '/api/v1/rfqs': {
+        get: {
+          summary: 'List RFQs (?status=received|parsed|priced|sent|won|lost|exception)',
+          tags: ['rfq'],
+          security: [{ bearer: [] }],
+          responses: { '200': { description: 'RFQ list' }, '401': { description: 'Unauthorized' } },
+        },
+        post: {
+          summary: 'Submit a new RFQ',
+          tags: ['rfq'],
+          security: [{ bearer: [] }],
+          responses: {
+            '201': { description: 'Created' },
+            '400': { description: 'Invalid input' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+          },
+        },
+      },
+      '/api/v1/rfqs/{id}': {
+        get: {
+          summary: 'RFQ detail (with pricing preview if not yet priced)',
+          tags: ['rfq'],
+          security: [{ bearer: [] }],
+          responses: { '200': { description: 'RFQ' }, '404': { description: 'Not found' } },
+        },
+      },
+      '/api/v1/rfqs/{id}/run-agent': {
+        post: {
+          summary: 'Manually trigger Quoting Agent on this RFQ',
+          tags: ['rfq'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Agent ran' },
+            '404': { description: 'Not found' },
+            '409': { description: 'Already priced' },
+          },
+        },
+      },
+      '/api/v1/rfqs/{id}/respond': {
+        post: {
+          summary: 'Customer responded won|lost (won materializes a shipment)',
+          tags: ['rfq'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Updated' },
+            '409': { description: 'Not in sent state OR already materialized' },
+          },
+        },
+      },
+      '/api/v1/rfqs/{id}/override': {
+        post: {
+          summary: 'Override an exception RFQ (action: send|kill)',
+          tags: ['rfq'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Updated' },
+            '409': { description: 'Not in exception state' },
+          },
+        },
+      },
+      '/api/v1/shipments/{id}/gates/{carrierId}': {
+        get: {
+          summary: 'Compliance gate preflight (no mutation)',
+          tags: ['carrier'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Gate result + findings' },
+            '404': { description: 'Carrier not found' },
+          },
+        },
+      },
       '/api/v1/audit/logs': {
         get: {
           summary: 'Paginated audit log (admin only)',

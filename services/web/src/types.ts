@@ -95,3 +95,35 @@ export interface ScoringWeights {
   formula: string;
   notes: string;
 }
+
+export type RfqStatus = 'received' | 'parsed' | 'priced' | 'sent' | 'won' | 'lost' | 'exception';
+
+export interface Rfq {
+  id: string;
+  customer: string;
+  origin: string;
+  destination: string;
+  distanceMiles: number;
+  equipmentType: 'dry_van' | 'reefer' | 'flatbed';
+  pickupDate: string;
+  status: RfqStatus;
+  priceOfferedUsd: number | null;
+  confidence: number | null;
+  reason: string | null;
+  shipmentId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type GateResult = 'pass' | 'soft' | 'hard';
+
+export interface GateFinding {
+  code: string;
+  severity: 'soft' | 'hard';
+  message: string;
+}
+
+export interface GateEvaluation {
+  result: GateResult;
+  findings: GateFinding[];
+}

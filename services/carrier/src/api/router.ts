@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import type { Pool } from 'pg';
 import { z } from 'zod';
+import { evaluateAssignmentGates } from '../../../compliance/src/domain/gates';
+import { ComplianceRepository } from '../../../compliance/src/repo/complianceRepository';
 import type { EventBus } from '../../../events/src/types';
 import { requireAuth, requireRole } from '../../../user/src/api/authMiddleware';
 import { AuditRepository } from '../../../user/src/repo/auditRepository';
@@ -10,7 +12,10 @@ import { selectCarrierController } from './selectCarrierController';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const AssignBody = z.object({ carrierId: z.string().regex(UUID_RE) });
+const AssignBody = z.object({
+  carrierId: z.string().regex(UUID_RE),
+  reason: z.string().min(10).max(500).optional(),
+});
 
 export interface CarrierRouterDeps {
   pool: Pool;
@@ -21,6 +26,7 @@ export interface CarrierRouterDeps {
 export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps): Router {
   const router = Router();
   const repo = new CarrierRepository(pool);
+  const complianceRepo = new ComplianceRepository(pool);
   const audit = new AuditRepository(pool);
 
   router.get('/api/v1/shipments', requireAuth(jwtSecret), async (_req, res) => {
@@ -72,6 +78,30 @@ export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps):
     selectCarrierController(repo),
   );
 
+  router.get(
+    '/api/v1/shipments/:id/gates/:carrierId',
+    requireAuth(jwtSecret),
+    requireRole('admin', 'broker'),
+    async (req, res) => {
+      const sRaw = req.params['id'];
+      const cRaw = req.params['carrierId'];
+      const shipmentId = typeof sRaw === 'string' ? sRaw : '';
+      const carrierId = typeof cRaw === 'string' ? cRaw : '';
+      if (!UUID_RE.test(shipmentId) || !UUID_RE.test(carrierId)) {
+        res.status(400).json({ error: 'invalid_id' });
+        return;
+      }
+      const carrier = await repo.findCarrierById(carrierId);
+      if (!carrier) {
+        res.status(404).json({ error: 'carrier_not_found' });
+        return;
+      }
+      const snap = await complianceRepo.getCarrierCompliance(carrierId);
+      const evalResult = evaluateAssignmentGates({ id: carrier.id, active: carrier.active }, snap);
+      res.status(200).json(evalResult);
+    },
+  );
+
   router.post(
     '/api/v1/shipments/:id/assign-carrier',
     requireAuth(jwtSecret),
@@ -88,6 +118,45 @@ export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps):
         res.status(400).json({ error: 'invalid_input' });
         return;
       }
+      const wantsOverride = req.query['override'] === 'true';
+
+      // Compliance gate evaluation BEFORE the mutation.
+      const carrier = await repo.findCarrierById(parsed.data.carrierId);
+      if (!carrier) {
+        res.status(400).json({ error: 'no_such_bid' });
+        return;
+      }
+      const snap = await complianceRepo.getCarrierCompliance(parsed.data.carrierId);
+      const gate = evaluateAssignmentGates({ id: carrier.id, active: carrier.active }, snap);
+      if (gate.result === 'hard') {
+        const blockEntry: Parameters<typeof audit.record>[0] = {
+          action: 'gate.hard_blocked',
+          target: shipmentId,
+          metadata: { carrierId: parsed.data.carrierId, findings: gate.findings },
+        };
+        if (req.user?.userId) blockEntry.actorUserId = req.user.userId;
+        void audit.record(blockEntry);
+        res.status(422).json({
+          error: 'compliance_blocked',
+          findings: gate.findings,
+        });
+        return;
+      }
+      if (gate.result === 'soft' && !wantsOverride) {
+        res.status(422).json({
+          error: 'compliance_warn',
+          findings: gate.findings,
+          requiresOverride: true,
+        });
+        return;
+      }
+      if (gate.result === 'soft' && wantsOverride) {
+        if (!parsed.data.reason) {
+          res.status(400).json({ error: 'invalid_reason' });
+          return;
+        }
+      }
+
       const result = await repo.assignCarrier(shipmentId, parsed.data.carrierId);
       if (!result.ok) {
         const status =
@@ -104,6 +173,21 @@ export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps):
       const ranked = rankCarriers(bids);
       const chosen = ranked.find((r) => r.carrierId === parsed.data.carrierId);
       const score = chosen?.score ?? 0;
+
+      if (gate.result === 'soft' && wantsOverride) {
+        const overrideEntry: Parameters<typeof audit.record>[0] = {
+          action: 'gate.soft_overridden',
+          target: shipmentId,
+          metadata: {
+            carrierId: parsed.data.carrierId,
+            findings: gate.findings,
+            reason: parsed.data.reason,
+          },
+        };
+        if (req.user?.userId) overrideEntry.actorUserId = req.user.userId;
+        void audit.record(overrideEntry);
+      }
+
       const auditEntry: Parameters<typeof audit.record>[0] = {
         action: 'shipment.assigned',
         target: shipmentId,

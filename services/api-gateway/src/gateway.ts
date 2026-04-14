@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import { buildCarrierRouter } from '../../carrier/src/api/router';
 import { buildComplianceRouter } from '../../compliance/src/api/router';
 import type { EventBus } from '../../events/src/types';
+import { buildRfqRouter } from '../../rfq/src/api/router';
 import { buildServer as buildUserService } from '../../user/src/api/server';
 import { buildHttpLogger, buildLogger } from './middleware/logger';
 import { buildMetrics } from './middleware/metrics';
@@ -109,6 +110,13 @@ export function buildGateway(cfg: GatewayConfig): BuiltGateway {
     ),
   );
   app.use(buildComplianceRouter({ pool: cfg.pool, jwtSecret: cfg.jwtSecret }));
+  app.use(
+    buildRfqRouter(
+      cfg.bus
+        ? { pool: cfg.pool, jwtSecret: cfg.jwtSecret, bus: cfg.bus }
+        : { pool: cfg.pool, jwtSecret: cfg.jwtSecret },
+    ),
+  );
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'not_found' });

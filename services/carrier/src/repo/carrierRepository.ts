@@ -111,6 +111,35 @@ export class CarrierRepository {
     }));
   }
 
+  async createShipment(
+    origin: string,
+    destination: string,
+    distanceMiles: number,
+  ): Promise<string> {
+    const r = await this.pool.query<{ id: string }>(
+      `INSERT INTO shipments (origin, destination, distance_miles, status)
+       VALUES ($1, $2, $3, 'quoting') RETURNING id`,
+      [origin, destination, distanceMiles],
+    );
+    const row = r.rows[0];
+    if (!row) throw new Error('insert returned no row');
+    return row.id;
+  }
+
+  async findCarrierById(
+    carrierId: string,
+  ): Promise<{ id: string; name: string; rating: number; active: boolean } | null> {
+    const r = await this.pool.query<{
+      id: string;
+      name: string;
+      rating: string;
+      active: boolean;
+    }>('SELECT id, name, rating, active FROM carriers WHERE id = $1', [carrierId]);
+    const row = r.rows[0];
+    if (!row) return null;
+    return { id: row.id, name: row.name, rating: Number(row.rating), active: row.active };
+  }
+
   async assignCarrier(
     shipmentId: string,
     carrierId: string,

@@ -1,0 +1,6 @@
+{
+  "name": "@af/rfq",
+  "version": "0.0.0",
+  "private": true,
+  "description": "RFQ → Quote pipeline + Quoting Agent (V-2)."
+}

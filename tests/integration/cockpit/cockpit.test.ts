@@ -130,6 +130,11 @@ describe('Supervisor cockpit endpoints', () => {
     const ship = await carrierRepo.createShipmentForTest('Houston', 'Atlanta', 800);
     const c1 = await carrierRepo.createCarrierForTest('Delta', 4, true);
     await carrierRepo.createBidForTest(ship, c1, 900, 15);
+    await complianceRepo.upsertCarrierComplianceForTest(c1, {
+      operatingStatus: 'active',
+      safetyRating: 'satisfactory',
+      insuranceOnFile: true,
+    });
 
     const res = await request(built.app)
       .post(`/api/v1/shipments/${ship}/assign-carrier`)
@@ -155,6 +160,11 @@ describe('Supervisor cockpit endpoints', () => {
     const ship = await carrierRepo.createShipmentForTest('A', 'B', 100);
     const c1 = await carrierRepo.createCarrierForTest('C', 4, true);
     await carrierRepo.createBidForTest(ship, c1, 500, 20);
+    await complianceRepo.upsertCarrierComplianceForTest(c1, {
+      operatingStatus: 'active',
+      safetyRating: 'satisfactory',
+      insuranceOnFile: true,
+    });
 
     await request(built.app)
       .post(`/api/v1/shipments/${ship}/assign-carrier`)
@@ -172,6 +182,13 @@ describe('Supervisor cockpit endpoints', () => {
     const token = await registerAndLogin(built.app, 'nobid@af.test');
     const ship = await carrierRepo.createShipmentForTest('A', 'B', 100);
     const c = await carrierRepo.createCarrierForTest('Lonely', 4, true);
+    // No bid for this carrier on this shipment, but seed compliance so the
+    // gate isn't the thing that blocks it — we want to assert the no-bid path.
+    await complianceRepo.upsertCarrierComplianceForTest(c, {
+      operatingStatus: 'active',
+      safetyRating: 'satisfactory',
+      insuranceOnFile: true,
+    });
     const res = await request(built.app)
       .post(`/api/v1/shipments/${ship}/assign-carrier`)
       .set('Authorization', `Bearer ${token}`)
