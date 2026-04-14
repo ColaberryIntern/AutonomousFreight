@@ -30,29 +30,29 @@ TOKEN=$(curl -s -X POST $BASE/auth/login \
 echo "token: $(echo $TOKEN | head -c 50)..."
 
 step "3/10 Who am I? (/me)" "Bearer token required. Returns userId, email, roles from the JWT."
-run "curl -s -H 'Authorization: Bearer \$TOKEN' $BASE/me | jq"
+run "curl -s -H \"Authorization: Bearer \$TOKEN\" $BASE/me | jq"
 
 step "4/10 Admin-only route as a broker" "Directive 011 RBAC: broker lacks admin role → 403."
-run "curl -s -w '\nHTTP %{http_code}\n' -H 'Authorization: Bearer \$TOKEN' $BASE/admin/ping"
+run "curl -s -w '\nHTTP %{http_code}\n' -H \"Authorization: Bearer \$TOKEN\" $BASE/admin/ping"
 
 step "5/10 Same route after admin login" "Register admin + login + retry — should return 200."
 curl -s -X POST $BASE/auth/register -H 'Content-Type: application/json' \
   -d '{"email":"tour-admin@af.test","password":"AdminPass99","role":"admin"}' >/dev/null || true
 ATOKEN=$(curl -s -X POST $BASE/auth/login -H 'Content-Type: application/json' \
   -d '{"email":"tour-admin@af.test","password":"AdminPass99"}' | jq -r .accessToken)
-run "curl -s -w '\nHTTP %{http_code}\n' -H 'Authorization: Bearer \$ATOKEN' $BASE/admin/ping"
+run "curl -s -w '\nHTTP %{http_code}\n' -H \"Authorization: Bearer \$ATOKEN\" $BASE/admin/ping"
 
 step "6/10 Carrier ranking (Sprint 3)" "Seeded shipment with 3 bids — scored deterministically by directive 030 (0.4*cost + 0.3*distance + 0.3*rating)."
-run "curl -s -X POST -H 'Authorization: Bearer \$TOKEN' '$BASE/api/v1/shipments/11111111-0000-0000-0000-000000000001/select-carrier?top=3' | jq"
+run "curl -s -X POST -H \"Authorization: Bearer \$TOKEN\" '$BASE/api/v1/shipments/11111111-0000-0000-0000-000000000001/select-carrier?top=3' | jq"
 
 step "7/10 Carrier compliance + risk score (Sprint 7)" "Pure risk-score function per directive 070."
-run "curl -s -H 'Authorization: Bearer \$ATOKEN' '$BASE/api/v1/carriers/22222222-0000-0000-0000-000000000001/compliance' | jq"
+run "curl -s -H \"Authorization: Bearer \$ATOKEN\" '$BASE/api/v1/carriers/22222222-0000-0000-0000-000000000001/compliance' | jq"
 
 step "8/10 Expiring compliance artifacts (Sprint 7)" "Admin/auditor only."
-run "curl -s -H 'Authorization: Bearer \$ATOKEN' '$BASE/api/v1/compliance/expiring?within_days=60' | jq"
+run "curl -s -H \"Authorization: Bearer \$ATOKEN\" '$BASE/api/v1/compliance/expiring?within_days=60' | jq"
 
 step "9/10 MFA enroll (Sprint 6)" "Returns TOTP secret + otpauth URI to scan into Authenticator."
-run "curl -s -X POST -H 'Authorization: Bearer \$TOKEN' $BASE/auth/mfa/enroll | jq"
+run "curl -s -X POST -H \"Authorization: Bearer \$TOKEN\" $BASE/auth/mfa/enroll | jq"
 
 step "10/10 Rate limiting in action (Sprint 2 / directive 020)" "Per-IP limit is 120/min by default. Firing 125 login attempts — last requests return 429."
 echo -n "last 10 status codes: "
