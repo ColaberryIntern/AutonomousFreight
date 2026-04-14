@@ -4,22 +4,22 @@ This supersedes the Sprint 13 EKS escalation: we deploy via docker-compose on th
 
 ## Target topology
 
-| Component | Host port | Internal port | Container | Notes |
-|---|---|---|---|---|
-| nginx (public ingress) | **8889** | 80 | `af-prod-nginx` | serves React + proxies `/api/*`, `/auth/*`, `/health`, `/me` to gateway |
-| API gateway | — (internal) | 3000 | `af-prod-gateway` | Node 20 runtime, non-root user |
-| Postgres 16 | — (internal) | 5432 | `af-prod-postgres` | isolated volume; the VPS's shared `pgvector/pgvector:pg15` is NOT touched |
-| Redis 7 | — (internal) | 6379 | `af-prod-redis` | cache + session revocation backing store |
+| Component              | Host port    | Internal port | Container          | Notes                                                                     |
+| ---------------------- | ------------ | ------------- | ------------------ | ------------------------------------------------------------------------- |
+| nginx (public ingress) | **8889**     | 80            | `af-prod-nginx`    | serves React + proxies `/api/*`, `/auth/*`, `/health`, `/me` to gateway   |
+| API gateway            | — (internal) | 3000          | `af-prod-gateway`  | Node 20 runtime, non-root user                                            |
+| Postgres 16            | — (internal) | 5432          | `af-prod-postgres` | isolated volume; the VPS's shared `pgvector/pgvector:pg15` is NOT touched |
+| Redis 7                | — (internal) | 6379          | `af-prod-redis`    | cache + session revocation backing store                                  |
 
 **Public entry point:** `http://95.216.199.47:8889` (or a Cloudflare subdomain pointing there).
 
 ## Port-map integration with existing services
 
-| Existing | New |
-|---|---|
-| 8888 accelerator prod | 8889 autonomous-freight |
-| 9999 / 9998 accelerator dev/dev2 | untouched |
-| 5432 shared pg15 | untouched (we run our own pg16 on the internal compose network) |
+| Existing                         | New                                                             |
+| -------------------------------- | --------------------------------------------------------------- |
+| 8888 accelerator prod            | 8889 autonomous-freight                                         |
+| 9999 / 9998 accelerator dev/dev2 | untouched                                                       |
+| 5432 shared pg15                 | untouched (we run our own pg16 on the internal compose network) |
 
 ## One-time VPS setup
 

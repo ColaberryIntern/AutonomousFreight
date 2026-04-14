@@ -1,8 +1,8 @@
 {
   "name": "@af/web",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
-  "description": "Autonomous Freight UAT shell — Vite + React.",
+  "description": "Autonomous Freight Supervisor Cockpit — Vite + React.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

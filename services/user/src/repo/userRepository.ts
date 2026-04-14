@@ -103,6 +103,44 @@ export class UserRepository {
     };
   }
 
+  async listUsers(
+    limit = 50,
+    offset = 0,
+  ): Promise<
+    Array<{
+      id: string;
+      email: string;
+      roles: string[];
+      mfaEnabled: boolean;
+      createdAt: string;
+    }>
+  > {
+    const clamped = Math.min(Math.max(limit, 1), 200);
+    const r = await this.pool.query<{
+      id: string;
+      email: string;
+      roles: string[];
+      mfa_enabled: boolean;
+      created_at: Date;
+    }>(
+      `SELECT u.id, u.email, u.mfa_enabled, u.created_at,
+              COALESCE(ARRAY_AGG(ur.role_name) FILTER (WHERE ur.role_name IS NOT NULL), '{}') AS roles
+       FROM users u
+       LEFT JOIN user_roles ur ON ur.user_id = u.id
+       GROUP BY u.id
+       ORDER BY u.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [clamped, Math.max(offset, 0)],
+    );
+    return r.rows.map((row) => ({
+      id: row.id,
+      email: row.email,
+      roles: row.roles,
+      mfaEnabled: row.mfa_enabled,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
   async findByEmailWithMfa(email: string): Promise<UserRecord | null> {
     const r = await this.pool.query<{ id: string }>('SELECT id FROM users WHERE email = $1', [
       email,

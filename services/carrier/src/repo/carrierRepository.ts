@@ -111,6 +111,49 @@ export class CarrierRepository {
     }));
   }
 
+  async assignCarrier(
+    shipmentId: string,
+    carrierId: string,
+  ): Promise<
+    | { ok: true }
+    | { ok: false; reason: 'shipment_not_quotable' | 'shipment_not_found' | 'no_such_bid' }
+  > {
+    const ship = await this.findShipmentById(shipmentId);
+    if (!ship) return { ok: false, reason: 'shipment_not_found' };
+
+    const bidCheck = await this.pool.query<{ carrier_id: string }>(
+      `SELECT b.carrier_id FROM carrier_bids b
+       JOIN carriers c ON c.id = b.carrier_id
+       WHERE b.shipment_id = $1 AND b.carrier_id = $2 AND c.active = TRUE`,
+      [shipmentId, carrierId],
+    );
+    if (bidCheck.rowCount === 0) return { ok: false, reason: 'no_such_bid' };
+
+    const update = await this.pool.query(
+      `UPDATE shipments SET status = 'assigned'
+       WHERE id = $1 AND status = 'quoting'`,
+      [shipmentId],
+    );
+    if (update.rowCount === 0) return { ok: false, reason: 'shipment_not_quotable' };
+    return { ok: true };
+  }
+
+  async countShipmentsByStatus(): Promise<Record<string, number>> {
+    const r = await this.pool.query<{ status: string; count: string }>(
+      `SELECT status, COUNT(*)::text AS count FROM shipments GROUP BY status`,
+    );
+    const out: Record<string, number> = {};
+    for (const row of r.rows) out[row.status] = Number(row.count);
+    return out;
+  }
+
+  async countActiveCarriers(): Promise<number> {
+    const r = await this.pool.query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM carriers WHERE active = TRUE`,
+    );
+    return Number(r.rows[0]?.c ?? 0);
+  }
+
   async createCarrierForTest(
     name: string,
     rating: number,

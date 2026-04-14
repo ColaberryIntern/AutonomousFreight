@@ -16,6 +16,16 @@ export function buildComplianceRouter({ pool, jwtSecret }: ComplianceRouterDeps)
   const repo = new ComplianceRepository(pool);
 
   router.get(
+    '/api/v1/compliance/summary',
+    requireAuth(jwtSecret),
+    requireRole('admin', 'auditor'),
+    async (_req, res) => {
+      const summary = await repo.getSummary(30);
+      res.status(200).json(summary);
+    },
+  );
+
+  router.get(
     '/api/v1/compliance/expiring',
     requireAuth(jwtSecret),
     requireRole('admin', 'auditor'),

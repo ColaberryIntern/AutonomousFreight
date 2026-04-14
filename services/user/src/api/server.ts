@@ -50,5 +50,30 @@ export function buildServer({ pool, jwtSecret, jwtTtl, bus, mfaKek }: ServerDeps
     },
   );
 
+  app.get(
+    '/api/v1/admin/users',
+    requireAuth(jwtSecret),
+    requireRole('admin'),
+    async (req: Request, res: Response) => {
+      const limit = Number(req.query['limit'] ?? 50);
+      const offset = Number(req.query['offset'] ?? 0);
+      const items = await repo.listUsers(limit, offset);
+      res.status(200).json({ items });
+    },
+  );
+
+  app.get(
+    '/api/v1/audit/logs',
+    requireAuth(jwtSecret),
+    requireRole('admin'),
+    async (req: Request, res: Response) => {
+      const limit = Number(req.query['limit'] ?? 50);
+      const offset = Number(req.query['offset'] ?? 0);
+      const action = typeof req.query['action'] === 'string' ? req.query['action'] : undefined;
+      const items = await audit.listPage(action ? { limit, offset, action } : { limit, offset });
+      res.status(200).json({ items });
+    },
+  );
+
   return app;
 }

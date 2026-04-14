@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Pool } from 'pg';
-import type { ComplianceSnapshot, OperatingStatus, SafetyRating } from '../domain/riskScore';
+import {
+  computeRiskScore,
+  type ComplianceSnapshot,
+  type OperatingStatus,
+  type SafetyRating,
+} from '../domain/riskScore';
 
 export interface ExpiringArtifact {
   id: string;
@@ -74,6 +79,64 @@ export class ComplianceRepository {
     };
     if (row.dot_number !== null) out.dotNumber = row.dot_number;
     return out;
+  }
+
+  async getSummary(expiringWithinDays: number = 30): Promise<{
+    riskBuckets: { green: number; amber: number; red: number; unknown: number };
+    artifactsByType: Record<string, number>;
+    artifactsExpiring: { total: number; expired: number };
+  }> {
+    const snaps = await this.pool.query<{
+      operating_status: OperatingStatus;
+      safety_rating: SafetyRating;
+      insurance_on_file: boolean;
+      snapshot_at: Date;
+    }>(
+      `SELECT operating_status, safety_rating, insurance_on_file, snapshot_at FROM carrier_compliance`,
+    );
+    const carriersTotal = await this.pool.query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM carriers WHERE active = TRUE`,
+    );
+    const carrierCount = Number(carriersTotal.rows[0]?.c ?? 0);
+    let green = 0,
+      amber = 0,
+      red = 0;
+    for (const row of snaps.rows) {
+      const ageDays = Math.floor((Date.now() - row.snapshot_at.getTime()) / 86_400_000);
+      const score = computeRiskScore({
+        operatingStatus: row.operating_status,
+        safetyRating: row.safety_rating,
+        insuranceOnFile: row.insurance_on_file,
+        snapshotAgeDays: ageDays,
+      });
+      if (score < 0.3) green++;
+      else if (score < 0.6) amber++;
+      else red++;
+    }
+    const unknown = Math.max(0, carrierCount - (green + amber + red));
+
+    const typeCounts = await this.pool.query<{ artifact_type: string; count: string }>(
+      `SELECT artifact_type, COUNT(*)::text AS count FROM compliance_artifacts GROUP BY artifact_type`,
+    );
+    const artifactsByType: Record<string, number> = {};
+    for (const row of typeCounts.rows) artifactsByType[row.artifact_type] = Number(row.count);
+
+    const expiring = await this.pool.query<{ total: string; expired: string }>(
+      `SELECT
+         COUNT(*) FILTER (WHERE expires_at <= NOW() + ($1::int * INTERVAL '1 day'))::text AS total,
+         COUNT(*) FILTER (WHERE expires_at < NOW())::text AS expired
+       FROM compliance_artifacts`,
+      [expiringWithinDays],
+    );
+    const exp = expiring.rows[0];
+    return {
+      riskBuckets: { green, amber, red, unknown },
+      artifactsByType,
+      artifactsExpiring: {
+        total: Number(exp?.total ?? 0),
+        expired: Number(exp?.expired ?? 0),
+      },
+    };
   }
 
   async upsertCarrierComplianceForTest(

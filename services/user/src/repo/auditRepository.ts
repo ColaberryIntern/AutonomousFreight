@@ -27,6 +27,51 @@ export class AuditRepository {
     }
   }
 
+  async listPage(
+    opts: {
+      limit?: number;
+      offset?: number;
+      action?: string;
+    } = {},
+  ): Promise<AuditRow[]> {
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
+    const offset = Math.max(opts.offset ?? 0, 0);
+    const where = opts.action ? 'WHERE action = $3' : '';
+    const params: unknown[] = opts.action ? [limit, offset, opts.action] : [limit, offset];
+    const r = await this.pool.query<{
+      id: string;
+      actor_user_id: string | null;
+      action: string;
+      target: string | null;
+      metadata: Record<string, unknown>;
+      occurred_at: Date;
+    }>(
+      `SELECT id, actor_user_id, action, target, metadata, occurred_at
+       FROM audit_log ${where}
+       ORDER BY id DESC LIMIT $1 OFFSET $2`,
+      params,
+    );
+    return r.rows.map((row) => {
+      const out: AuditRow = {
+        id: row.id,
+        action: row.action,
+        metadata: row.metadata,
+        occurredAt: row.occurred_at.toISOString(),
+      };
+      if (row.actor_user_id !== null) out.actorUserId = row.actor_user_id;
+      if (row.target !== null) out.target = row.target;
+      return out;
+    });
+  }
+
+  async countSince(isoTimestamp: string): Promise<number> {
+    const r = await this.pool.query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM audit_log WHERE occurred_at >= $1`,
+      [isoTimestamp],
+    );
+    return Number(r.rows[0]?.c ?? 0);
+  }
+
   async listForTest(action?: string): Promise<AuditRow[]> {
     process.env['NODE_ENV'] = 'test';
     const where = action ? 'WHERE action = $1' : '';

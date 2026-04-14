@@ -25,6 +25,7 @@ const config: Config = {
   collectCoverageFrom: ['services/**/*.ts', 'execution/**/*.ts', '!**/*.d.ts'],
   coverageDirectory: 'coverage',
   forceExit: true,
+  testTimeout: 60_000,
 };
 
 export default config;

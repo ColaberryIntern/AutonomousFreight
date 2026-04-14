@@ -74,6 +74,87 @@ export function buildOpenApiDoc(): OpenApiDoc {
           },
         },
       },
+      '/api/v1/shipments/{id}': {
+        get: {
+          summary: 'Shipment detail with bids + rankings',
+          tags: ['carrier'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Shipment + bids + rankings' },
+            '400': { description: 'Bad id' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+            '404': { description: 'Not found' },
+          },
+        },
+      },
+      '/api/v1/shipments/{id}/assign-carrier': {
+        post: {
+          summary: 'Assign a carrier to a quoting shipment (mutation, audited, event emitted)',
+          tags: ['carrier'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Assigned' },
+            '400': { description: 'Invalid id or bid does not exist' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+            '404': { description: 'Shipment not found' },
+            '409': { description: 'Shipment not in quoting state' },
+          },
+        },
+      },
+      '/api/v1/scoring/weights': {
+        get: {
+          summary: 'Scoring weights + formula (explainability)',
+          tags: ['carrier'],
+          security: [{ bearer: [] }],
+          responses: { '200': { description: 'Weights' }, '401': { description: 'Unauthorized' } },
+        },
+      },
+      '/api/v1/dashboard/overview': {
+        get: {
+          summary: 'Aggregate counts for the supervisor cockpit',
+          tags: ['dashboard'],
+          security: [{ bearer: [] }],
+          responses: { '200': { description: 'Overview' }, '401': { description: 'Unauthorized' } },
+        },
+      },
+      '/api/v1/compliance/summary': {
+        get: {
+          summary: 'Risk-bucket and artifact-type summary (admin/auditor)',
+          tags: ['compliance'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Summary' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+          },
+        },
+      },
+      '/api/v1/admin/users': {
+        get: {
+          summary: 'List users (admin only)',
+          tags: ['admin'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Users list' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+          },
+        },
+      },
+      '/api/v1/audit/logs': {
+        get: {
+          summary: 'Paginated audit log (admin only)',
+          tags: ['admin'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Audit events' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+          },
+        },
+      },
       '/api/v1/carriers': {
         get: {
           summary: 'List carriers (?active=false to include inactive)',

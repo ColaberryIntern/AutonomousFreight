@@ -101,7 +101,13 @@ export function buildGateway(cfg: GatewayConfig): BuiltGateway {
   const userService = buildUserService(userServiceDeps);
   app.use(userService);
 
-  app.use(buildCarrierRouter({ pool: cfg.pool, jwtSecret: cfg.jwtSecret }));
+  app.use(
+    buildCarrierRouter(
+      cfg.bus
+        ? { pool: cfg.pool, jwtSecret: cfg.jwtSecret, bus: cfg.bus }
+        : { pool: cfg.pool, jwtSecret: cfg.jwtSecret },
+    ),
+  );
   app.use(buildComplianceRouter({ pool: cfg.pool, jwtSecret: cfg.jwtSecret }));
 
   app.use((_req: Request, res: Response) => {
