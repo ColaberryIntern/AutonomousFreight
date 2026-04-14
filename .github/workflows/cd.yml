@@ -1,0 +1,16 @@
+name: CD (skeleton — disabled)
+
+# Sprint 13 — disabled by default; enable only after explicit cluster-provision approval.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  blue-green:
+    runs-on: ubuntu-latest
+    if: false # disabled — re-enable in a follow-up PR after approval
+    steps:
+      - uses: actions/checkout@v4
+      - name: Smoke test against staging color
+        run: echo "Smoke test placeholder — wires npm run test:e2e against staging color."
+      - name: Switch active color
+        run: echo "Switch placeholder — kubectl patch service gateway -p '{\"spec\":{\"selector\":{\"color\":\"green\"}}}'"

@@ -1,0 +1,6 @@
+{
+  "name": "@af/platform",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cross-cutting platform primitives — cache, query instrumentation, perf utilities."
+}

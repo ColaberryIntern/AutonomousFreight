@@ -1,0 +1,6 @@
+{
+  "name": "@af/carrier",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Carrier Service — deterministic carrier selection (v1)."
+}

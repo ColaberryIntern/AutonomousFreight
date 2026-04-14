@@ -1,0 +1,6 @@
+{
+  "name": "@af/api-gateway",
+  "version": "0.0.0",
+  "private": true,
+  "description": "API Gateway — implemented in Sprint 2."
+}

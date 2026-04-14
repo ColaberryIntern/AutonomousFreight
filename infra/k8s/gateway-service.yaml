@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: autonomous-freight
+spec:
+  type: ClusterIP
+  selector:
+    app: gateway
+    color: blue
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http

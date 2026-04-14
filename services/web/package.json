@@ -1,0 +1,9 @@
+{
+  "name": "@af/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Autonomous Freight web shell — Sprint 5 placeholder. Vite + React app added when needed for UAT (Sprint 17).",
+  "scripts": {
+    "build": "echo 'web shell stub — Vite scaffold lands in Sprint 17'"
+  }
+}

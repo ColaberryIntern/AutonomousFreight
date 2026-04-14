@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateway
+  namespace: autonomous-freight
+  annotations:
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location /metrics { deny all; return 404; }
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.autonomous-freight.example
+      secretName: gateway-tls
+  rules:
+    - host: api.autonomous-freight.example
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 80

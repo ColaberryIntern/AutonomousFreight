@@ -1,0 +1,6 @@
+{
+  "name": "@af/ai",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AI Recommendations Service — pure-TS decision-tree ensemble."
+}

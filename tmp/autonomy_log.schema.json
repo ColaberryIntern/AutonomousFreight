@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AutonomyLog",
+  "description": "Per CLAUDE.md §Autonomous Logging. Appended to on every meaningful change.",
+  "type": "object",
+  "required": ["entries"],
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "timestamp",
+          "changeSummary",
+          "assumptions",
+          "confidenceScore",
+          "testsAdded",
+          "directivesUpdated",
+          "escalationTriggered"
+        ],
+        "properties": {
+          "timestamp": { "type": "string", "format": "date-time" },
+          "changeSummary": { "type": "string", "minLength": 1 },
+          "assumptions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "maxItems": 5
+          },
+          "confidenceScore": { "type": "number", "minimum": 0, "maximum": 1 },
+          "testsAdded": { "type": "integer", "minimum": 0 },
+          "directivesUpdated": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "escalationTriggered": { "type": "boolean" },
+          "sprint": { "type": "integer", "minimum": 0 },
+          "diagnosticMode": { "type": "boolean" },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

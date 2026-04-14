@@ -1,0 +1,6 @@
+# OWASP ZAP allowlist for known/false-positive findings.
+# Format: <ruleId>\t<IGNORE|WARN|FAIL>\t<comment>
+# Update as findings are triaged. Never blanket-IGNORE without a reason.
+
+10038	WARN	Content Security Policy header — gateway adds in Sprint 18 launch hardening
+10063	WARN	Permissions-Policy header — same as above

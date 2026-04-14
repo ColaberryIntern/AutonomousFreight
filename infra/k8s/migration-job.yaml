@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  namespace: autonomous-freight
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/autonomous-freight/gateway@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          command: ['node', '-e', "require('./services/api-gateway/dist/migrate.js').runAll()"]
+          envFrom:
+            - secretRef:
+                name: gateway-secrets

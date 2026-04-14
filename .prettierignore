@@ -1,0 +1,11 @@
+# Source-of-truth documents — treat as immutable content, don't reformat.
+CLAUDE.md
+Autonomous_Freight_Build_Guide_v1.md
+
+# Build output
+dist/
+coverage/
+node_modules/
+
+# Terraform — has its own formatter (terraform fmt)
+infra/terraform/

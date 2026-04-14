@@ -1,0 +1,43 @@
+# Local development stack — Postgres + Redis only for Sprint 0.
+# Additional services (RabbitMQ, MailHog, etc.) get added per-sprint.
+services:
+  postgres:
+    image: postgres:16
+    container_name: af-postgres
+    environment:
+      POSTGRES_USER: freight
+      POSTGRES_PASSWORD: freight
+      POSTGRES_DB: freight_dev
+    ports:
+      - '5434:5432'
+    volumes:
+      - af-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U freight']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: af-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - af-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: af-mailhog
+    ports:
+      - '1025:1025' # SMTP
+      - '8025:8025' # web UI → http://localhost:8025
+
+volumes:
+  af-postgres-data:
+  af-redis-data:

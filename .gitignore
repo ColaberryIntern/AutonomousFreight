@@ -1,0 +1,37 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Env files — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+config/development.env
+config/staging.env
+config/production.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Autonomy runtime artifacts (content is dynamic; schemas are committed)
+tmp/autonomy_log.json
+tmp/escalation.json
+!tmp/*.schema.json
+!tmp/README.md

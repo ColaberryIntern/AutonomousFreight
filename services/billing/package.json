@@ -1,0 +1,6 @@
+{
+  "name": "@af/billing",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Billing Service — Stripe driver + stub driver."
+}

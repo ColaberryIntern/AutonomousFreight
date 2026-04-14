@@ -1,0 +1,54 @@
+import express, { type Express, type Request, type Response } from 'express';
+import type { Pool } from 'pg';
+import type { EventBus } from '../../../events/src/types';
+import { requireAuth, requireRole } from './authMiddleware';
+import { loginController } from './loginController';
+import { enrollMfaController, mfaLoginController, verifyMfaController } from './mfaController';
+import { registerController } from './registerController';
+import { AuditRepository } from '../repo/auditRepository';
+import { UserRepository } from '../repo/userRepository';
+
+export interface ServerDeps {
+  pool: Pool;
+  jwtSecret: string;
+  jwtTtl: string;
+  bus?: EventBus;
+  mfaKek?: string;
+}
+
+export function buildServer({ pool, jwtSecret, jwtTtl, bus, mfaKek }: ServerDeps): Express {
+  const app = express();
+  app.use(express.json({ limit: '10kb' }));
+
+  const repo = new UserRepository(pool);
+  const audit = new AuditRepository(pool);
+
+  app.get('/health', (_req: Request, res: Response) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
+  app.post('/auth/register', registerController(bus ? { repo, bus } : { repo }));
+  app.post('/auth/login', loginController({ repo, jwtSecret, jwtTtl }));
+
+  if (mfaKek) {
+    const mfaDeps = { repo, audit, jwtSecret, jwtTtl, kek: mfaKek };
+    app.post('/auth/mfa/enroll', requireAuth(jwtSecret), enrollMfaController(mfaDeps));
+    app.post('/auth/mfa/verify', requireAuth(jwtSecret), verifyMfaController(mfaDeps));
+    app.post('/auth/mfa/login', mfaLoginController(mfaDeps));
+  }
+
+  app.get('/me', requireAuth(jwtSecret), (req: Request, res: Response) => {
+    res.status(200).json({ user: req.user });
+  });
+
+  app.get(
+    '/admin/ping',
+    requireAuth(jwtSecret),
+    requireRole('admin'),
+    (_req: Request, res: Response) => {
+      res.status(200).json({ ok: true });
+    },
+  );
+
+  return app;
+}
