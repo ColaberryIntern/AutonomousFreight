@@ -1,9 +1,22 @@
 {
   "name": "@af/web",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
-  "description": "Autonomous Freight web shell — Sprint 5 placeholder. Vite + React app added when needed for UAT (Sprint 17).",
+  "description": "Autonomous Freight UAT shell — Vite + React.",
+  "type": "module",
   "scripts": {
-    "build": "echo 'web shell stub — Vite scaffold lands in Sprint 17'"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "vite": "^5.4.0"
   }
 }
