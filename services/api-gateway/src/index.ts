@@ -44,19 +44,50 @@ function buildEmailDriver(env: NodeJS.ProcessEnv): EmailDriver {
 async function main(): Promise<void> {
   const cfg = loadGatewayConfig();
   const pool = new Pool({ connectionString: cfg.databaseUrl });
+  const carrierRepo = new CarrierRepository(pool);
   await new UserRepository(pool).runMigrations();
-  await new CarrierRepository(pool).runMigrations();
+  await carrierRepo.runMigrations();
   await new ComplianceRepository(pool).runMigrations();
   await new PreferencesRepository(pool).runMigrations();
   await new RfqRepository(pool).runMigrations();
+  await carrierRepo.runLifecycleMigrations();
 
   const bus: EventBus = new InMemoryEventBus();
   const driver = buildEmailDriver(process.env);
   startNotificationService({ pool, bus, driver });
 
+  const complianceRepo = new ComplianceRepository(pool);
   const rfqRepo = new RfqRepository(pool);
   const audit = new AuditRepository(pool);
   startQuotingAgentLoop({ repo: rfqRepo, audit, bus }, 5000);
+
+  // V-3 agents
+  const { runProcurementTick } = await import('../../carrier/src/agent/procurementAgent');
+  const { runTrackingTick } = await import('../../carrier/src/agent/trackingAgent');
+  const { runDocumentTick } = await import('../../carrier/src/agent/documentAgent');
+
+  const agentInterval = 5000;
+  const agentLoop = async (): Promise<void> => {
+    try {
+      await runProcurementTick({ carrierRepo, complianceRepo, audit, bus });
+    } catch (err) {
+      console.error('[agent-loop] procurement error', err);
+    }
+    if (process.env['FEATURE_TRACKING_SIM'] === 'true') {
+      try {
+        await runTrackingTick({ pool, audit });
+      } catch (err) {
+        console.error('[agent-loop] tracking error', err);
+      }
+    }
+    try {
+      await runDocumentTick({ pool, audit });
+    } catch (err) {
+      console.error('[agent-loop] document error', err);
+    }
+    setTimeout(() => void agentLoop(), agentInterval);
+  };
+  setTimeout(() => void agentLoop(), agentInterval);
 
   const gwCfg: Parameters<typeof buildGateway>[0] = {
     pool,

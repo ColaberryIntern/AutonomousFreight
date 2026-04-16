@@ -62,6 +62,71 @@ export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps):
     res.status(200).json({ items });
   });
 
+  router.get('/api/v1/shipments/:id/milestones', requireAuth(jwtSecret), async (req, res) => {
+    const raw = req.params['id'];
+    const id = typeof raw === 'string' ? raw : '';
+    if (!UUID_RE.test(id)) {
+      res.status(400).json({ error: 'invalid_shipment_id' });
+      return;
+    }
+    const r = await repo.pool.query<{
+      id: string;
+      milestone: string;
+      occurred_at: Date;
+      metadata: Record<string, unknown>;
+    }>(
+      `SELECT id::text, milestone, occurred_at, metadata
+         FROM shipment_milestones WHERE shipment_id = $1
+         ORDER BY occurred_at ASC`,
+      [id],
+    );
+    res.status(200).json({
+      items: r.rows.map((row) => ({
+        id: row.id,
+        milestone: row.milestone,
+        occurredAt: row.occurred_at.toISOString(),
+        metadata: row.metadata,
+      })),
+    });
+  });
+
+  const DocUploadBody = z.object({
+    docType: z.enum(['bol', 'pod', 'invoice']),
+    rawText: z.string().min(1).max(10000),
+  });
+
+  router.post(
+    '/api/v1/shipments/:id/documents',
+    requireAuth(jwtSecret),
+    requireRole('admin', 'broker'),
+    async (req, res) => {
+      const raw = req.params['id'];
+      const shipmentId = typeof raw === 'string' ? raw : '';
+      if (!UUID_RE.test(shipmentId)) {
+        res.status(400).json({ error: 'invalid_shipment_id' });
+        return;
+      }
+      const parsed = DocUploadBody.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'invalid_input' });
+        return;
+      }
+      await repo.pool.query(
+        `INSERT INTO shipment_documents (shipment_id, doc_type, raw_text)
+         VALUES ($1, $2, $3)`,
+        [shipmentId, parsed.data.docType, parsed.data.rawText],
+      );
+      const auditEntry: Parameters<typeof audit.record>[0] = {
+        action: 'document.uploaded',
+        target: shipmentId,
+        metadata: { docType: parsed.data.docType },
+      };
+      if (req.user?.userId) auditEntry.actorUserId = req.user.userId;
+      void audit.record(auditEntry);
+      res.status(201).json({ ok: true });
+    },
+  );
+
   router.get('/api/v1/scoring/weights', requireAuth(jwtSecret), (_req, res) => {
     res.status(200).json({
       weights: WEIGHTS,

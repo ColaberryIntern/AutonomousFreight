@@ -5,6 +5,7 @@ const { copyFileSync, mkdirSync, readdirSync, statSync, existsSync } = require('
 const { join } = require('node:path');
 
 const SERVICES = ['user', 'carrier', 'notifications', 'compliance', 'rfq'];
+// Note: carrier/migrations includes 002 + 007; all are copied.
 
 function copyRecursive(src, dest) {
   mkdirSync(dest, { recursive: true });

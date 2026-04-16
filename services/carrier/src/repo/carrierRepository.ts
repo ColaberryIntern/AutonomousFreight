@@ -12,7 +12,7 @@ export interface ShipmentRecord {
 }
 
 export class CarrierRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(public readonly pool: Pool) {}
 
   async runMigrations(): Promise<void> {
     const sqlPath = join(__dirname, 'migrations', '002_carriers_shipments.sql');
@@ -109,6 +109,45 @@ export class CarrierRepository {
       costUsd: Number(r.cost_usd),
       pickupDistanceMiles: r.pickup_distance_miles,
     }));
+  }
+
+  async listShipmentsByStatus(status: string, limit = 50): Promise<ShipmentRecord[]> {
+    const r = await this.pool.query<{
+      id: string;
+      origin: string;
+      destination: string;
+      distance_miles: number;
+      status: ShipmentRecord['status'];
+    }>(
+      `SELECT id, origin, destination, distance_miles, status
+       FROM shipments WHERE status = $1 ORDER BY created_at ASC LIMIT $2`,
+      [status, limit],
+    );
+    return r.rows.map((row) => ({
+      id: row.id,
+      origin: row.origin,
+      destination: row.destination,
+      distanceMiles: row.distance_miles,
+      status: row.status,
+    }));
+  }
+
+  async assignCarrierWithMeta(
+    shipmentId: string,
+    carrierId: string,
+  ): Promise<{ ok: true } | { ok: false }> {
+    const update = await this.pool.query(
+      `UPDATE shipments SET status = 'assigned', assigned_carrier_id = $1, assigned_at = NOW()
+       WHERE id = $2 AND status = 'quoting'`,
+      [carrierId, shipmentId],
+    );
+    if (update.rowCount === 0) return { ok: false };
+    return { ok: true };
+  }
+
+  async runLifecycleMigrations(): Promise<void> {
+    const sql = readFileSync(join(__dirname, 'migrations', '007_lifecycle_v3.sql'), 'utf8');
+    await this.pool.query(sql);
   }
 
   async createShipment(
