@@ -1,13 +1,8 @@
 -- Directive 220: Invoice-to-Cash lifecycle.
 -- Idempotent.
 
--- Expand shipment status
-ALTER TABLE shipments DROP CONSTRAINT IF EXISTS shipments_status_check;
-ALTER TABLE shipments ADD CONSTRAINT shipments_status_check
-  CHECK (status IN (
-    'quoting', 'assigned', 'dispatched', 'in_transit', 'delivered',
-    'doc_verified', 'rate_audited', 'rate_audit_exception', 'invoiced', 'cancelled'
-  ));
+-- Constraint managed by 009_settlements_disputes.sql (the latest migration).
+-- Removed from here to avoid DROP+recreate with a subset on re-run.
 
 -- Invoice number sequence
 CREATE SEQUENCE IF NOT EXISTS invoice_number_seq START 1001;

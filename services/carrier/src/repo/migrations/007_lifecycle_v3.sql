@@ -2,10 +2,8 @@
 -- Adds dispatched/in_transit/doc_verified statuses + milestone + document tables.
 -- Idempotent.
 
--- Expand shipment status CHECK to include new states
-ALTER TABLE shipments DROP CONSTRAINT IF EXISTS shipments_status_check;
-ALTER TABLE shipments ADD CONSTRAINT shipments_status_check
-  CHECK (status IN ('quoting', 'assigned', 'dispatched', 'in_transit', 'delivered', 'doc_verified', 'cancelled'));
+-- Constraint managed by 009_settlements_disputes.sql (the latest migration).
+-- Removed from here to avoid DROP+recreate with a subset on re-run.
 
 -- Shipment milestones (directive 211)
 CREATE TABLE IF NOT EXISTS shipment_milestones (
