@@ -67,6 +67,7 @@ services:
       GMAIL_REFRESH_TOKEN: ${GMAIL_REFRESH_TOKEN:-}
       MFA_KEK: ${MFA_KEK:-}
       FEATURE_GA_OPTIMIZER: ${FEATURE_GA_OPTIMIZER:-false}
+      FEATURE_TRACKING_SIM: ${FEATURE_TRACKING_SIM:-true}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     # NOT exposed to host — nginx is the only public entry point.
     expose:
