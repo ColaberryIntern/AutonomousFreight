@@ -58,6 +58,11 @@ async function main(): Promise<void> {
     'utf8',
   );
   await pool.query(invoiceSql);
+  const settleSql = readFileSync(
+    join(__dirname, '../../carrier/src/repo/migrations/009_settlements_disputes.sql'),
+    'utf8',
+  );
+  await pool.query(settleSql);
 
   const bus: EventBus = new InMemoryEventBus();
   const driver = buildEmailDriver(process.env);
@@ -74,6 +79,9 @@ async function main(): Promise<void> {
   const { runDocumentTick } = await import('../../carrier/src/agent/documentAgent');
   const { runRateAuditTick } = await import('../../carrier/src/agent/rateAuditAgent');
   const { runInvoiceTick } = await import('../../carrier/src/agent/invoiceAgent');
+  const { runPaymentMatchTick } = await import('../../carrier/src/agent/paymentMatchAgent');
+  const { runSettlementTick } = await import('../../carrier/src/agent/settlementAgent');
+  const { runDisputeTick } = await import('../../carrier/src/agent/disputeAgent');
 
   const agentInterval = 5000;
   const agentLoop = async (): Promise<void> => {
@@ -103,6 +111,21 @@ async function main(): Promise<void> {
       await runInvoiceTick({ pool, audit, bus });
     } catch (err) {
       console.error('[agent-loop] invoice error', err);
+    }
+    try {
+      await runPaymentMatchTick({ pool, audit });
+    } catch (err) {
+      console.error('[agent-loop] payment-match error', err);
+    }
+    try {
+      await runSettlementTick({ pool, audit });
+    } catch (err) {
+      console.error('[agent-loop] settlement error', err);
+    }
+    try {
+      await runDisputeTick({ pool, audit });
+    } catch (err) {
+      console.error('[agent-loop] dispute error', err);
     }
     setTimeout(() => void agentLoop(), agentInterval);
   };

@@ -127,5 +127,101 @@ export function buildInvoiceRouter(pool: Pool, jwtSecret: string): Router {
     },
   );
 
+  router.get(
+    '/api/v1/settlements',
+    requireAuth(jwtSecret),
+    requireRole('admin', 'auditor'),
+    async (_req, res) => {
+      const r = await pool.query(
+        `SELECT s.id, s.invoice_id, s.carrier_id, s.amount_usd, s.status, s.created_at,
+                c.name AS carrier_name, i.invoice_number
+         FROM settlements s
+         JOIN carriers c ON c.id = s.carrier_id
+         JOIN invoices i ON i.id = s.invoice_id
+         ORDER BY s.created_at DESC LIMIT 100`,
+      );
+      res.status(200).json({
+        items: r.rows.map((row: Record<string, unknown>) => ({
+          id: row.id,
+          invoiceId: row.invoice_id,
+          carrierId: row.carrier_id,
+          carrierName: row.carrier_name,
+          invoiceNumber: row.invoice_number,
+          amountUsd: Number(row.amount_usd),
+          status: row.status,
+          createdAt: (row.created_at as Date).toISOString(),
+        })),
+      });
+    },
+  );
+
+  router.get(
+    '/api/v1/disputes',
+    requireAuth(jwtSecret),
+    requireRole('admin', 'auditor'),
+    async (_req, res) => {
+      const r = await pool.query(
+        `SELECT d.id, d.invoice_id, d.reason, d.discrepancy_usd, d.status,
+                d.resolution, d.created_at, d.resolved_at, i.invoice_number
+         FROM disputes d
+         JOIN invoices i ON i.id = d.invoice_id
+         ORDER BY d.created_at DESC LIMIT 100`,
+      );
+      res.status(200).json({
+        items: r.rows.map((row: Record<string, unknown>) => ({
+          id: row.id,
+          invoiceId: row.invoice_id,
+          invoiceNumber: row.invoice_number,
+          reason: row.reason,
+          discrepancyUsd: Number(row.discrepancy_usd),
+          status: row.status,
+          resolution: row.resolution,
+          createdAt: (row.created_at as Date).toISOString(),
+          resolvedAt: row.resolved_at ? (row.resolved_at as Date).toISOString() : null,
+        })),
+      });
+    },
+  );
+
+  router.post(
+    '/api/v1/disputes/:id/resolve',
+    requireAuth(jwtSecret),
+    requireRole('admin'),
+    async (req, res) => {
+      const raw = req.params['id'];
+      const id = typeof raw === 'string' ? raw : '';
+      if (!UUID_RE.test(id)) {
+        res.status(400).json({ error: 'invalid_id' });
+        return;
+      }
+      const body = req.body as Record<string, unknown> | undefined;
+      const resolution = typeof body?.resolution === 'string' ? body.resolution : '';
+      if (resolution.length < 5) {
+        res.status(400).json({ error: 'resolution_required' });
+        return;
+      }
+      const update = await pool.query(
+        `UPDATE disputes SET status = 'resolved', resolution = $1, resolved_at = NOW()
+         WHERE id = $2 AND status = 'open'`,
+        [resolution, id],
+      );
+      if (update.rowCount === 0) {
+        res.status(409).json({ error: 'not_resolvable' });
+        return;
+      }
+      const dispute = await pool.query<{ invoice_id: string }>(
+        `SELECT invoice_id FROM disputes WHERE id = $1`,
+        [id],
+      );
+      if (dispute.rows[0]) {
+        await pool.query(
+          `UPDATE invoices SET status = 'matched' WHERE id = $1 AND status = 'match_failed'`,
+          [dispute.rows[0].invoice_id],
+        );
+      }
+      res.status(200).json({ ok: true });
+    },
+  );
+
   return router;
 }
