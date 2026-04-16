@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Pool } from 'pg';
 import { CarrierRepository } from '../../carrier/src/repo/carrierRepository';
 import { ComplianceRepository } from '../../compliance/src/repo/complianceRepository';
@@ -51,6 +53,11 @@ async function main(): Promise<void> {
   await new PreferencesRepository(pool).runMigrations();
   await new RfqRepository(pool).runMigrations();
   await carrierRepo.runLifecycleMigrations();
+  const invoiceSql = readFileSync(
+    join(__dirname, '../../carrier/src/repo/migrations/008_invoices.sql'),
+    'utf8',
+  );
+  await pool.query(invoiceSql);
 
   const bus: EventBus = new InMemoryEventBus();
   const driver = buildEmailDriver(process.env);
@@ -65,6 +72,8 @@ async function main(): Promise<void> {
   const { runProcurementTick } = await import('../../carrier/src/agent/procurementAgent');
   const { runTrackingTick } = await import('../../carrier/src/agent/trackingAgent');
   const { runDocumentTick } = await import('../../carrier/src/agent/documentAgent');
+  const { runRateAuditTick } = await import('../../carrier/src/agent/rateAuditAgent');
+  const { runInvoiceTick } = await import('../../carrier/src/agent/invoiceAgent');
 
   const agentInterval = 5000;
   const agentLoop = async (): Promise<void> => {
@@ -84,6 +93,16 @@ async function main(): Promise<void> {
       await runDocumentTick({ pool, audit });
     } catch (err) {
       console.error('[agent-loop] document error', err);
+    }
+    try {
+      await runRateAuditTick({ pool, audit });
+    } catch (err) {
+      console.error('[agent-loop] rate-audit error', err);
+    }
+    try {
+      await runInvoiceTick({ pool, audit, bus });
+    } catch (err) {
+      console.error('[agent-loop] invoice error', err);
     }
     setTimeout(() => void agentLoop(), agentInterval);
   };
