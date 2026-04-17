@@ -142,30 +142,6 @@ export function DeploymentPage({ token }: Props): React.ReactElement {
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ ...styles.card, flex: 1, minWidth: 300 }}>
-          <h3 style={styles.h3}>Agent fleet (9 agents)</h3>
-          <table style={styles.table}>
-            <tbody>
-              {[
-                ['Quoting Agent', 'Prices RFQs, auto-sends if conf ≥ 0.85'],
-                ['Procurement Agent', 'Auto-assigns carriers when gate+score pass'],
-                ['Tracking Agent', 'Simulates milestones (pickup→deliver)'],
-                ['Document Agent', 'Validates BOL via regex extraction'],
-                ['Rate Audit Agent', 'Checks margin ≥ 5% before invoice'],
-                ['Invoice Agent', 'Generates AF-INV-NNNN invoices'],
-                ['Payment Match Agent', 'Three-way match on paid invoices'],
-                ['Settlement Agent', 'Creates carrier payment queue'],
-                ['Dispute Agent', 'Auto-resolves < 5% discrepancies'],
-              ].map(([name, desc]) => (
-                <tr key={name}>
-                  <td style={{ ...styles.td, fontWeight: 600 }}>{name}</td>
-                  <td style={{ ...styles.td, fontSize: 12, color: colors.textMuted }}>{desc}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div style={{ ...styles.card, flex: 1, minWidth: 300 }}>
           <h3 style={styles.h3}>Deployment topology</h3>
           <table style={styles.table}>
             <thead>

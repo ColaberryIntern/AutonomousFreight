@@ -127,6 +127,153 @@ export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps):
     },
   );
 
+  const AGENT_REGISTRY = [
+    {
+      name: 'quoting_agent',
+      label: 'Quoting Agent',
+      department: 'quoting',
+      type: 'pricing',
+      schedule: 'Every 5s — prices RFQs',
+      directive: '200',
+      auditPrefix: 'rfq.',
+    },
+    {
+      name: 'procurement_agent',
+      label: 'Procurement Agent',
+      department: 'procurement',
+      type: 'assignment',
+      schedule: 'Every 5s — auto-assigns carriers',
+      directive: '210',
+      auditPrefix: 'agent.procurement.',
+    },
+    {
+      name: 'tracking_agent',
+      label: 'Tracking Agent',
+      department: 'execution',
+      type: 'simulation',
+      schedule: 'Every 5s — milestone progression',
+      directive: '211',
+      auditPrefix: 'agent.tracking.',
+    },
+    {
+      name: 'document_agent',
+      label: 'Document Agent',
+      department: 'documents',
+      type: 'validation',
+      schedule: 'Every 5s — BOL extraction',
+      directive: '212',
+      auditPrefix: 'agent.document.',
+    },
+    {
+      name: 'rate_audit_agent',
+      label: 'Rate Audit Agent',
+      department: 'financials',
+      type: 'audit',
+      schedule: 'Every 5s — margin check',
+      directive: '220',
+      auditPrefix: 'agent.rate_audit.',
+    },
+    {
+      name: 'invoice_agent',
+      label: 'Invoice Agent',
+      department: 'financials',
+      type: 'generation',
+      schedule: 'Every 5s — auto-invoice',
+      directive: '220',
+      auditPrefix: 'agent.invoice.',
+    },
+    {
+      name: 'payment_match_agent',
+      label: 'Payment Match Agent',
+      department: 'financials',
+      type: 'matching',
+      schedule: 'Every 5s — three-way match',
+      directive: '230',
+      auditPrefix: 'agent.payment.',
+    },
+    {
+      name: 'settlement_agent',
+      label: 'Settlement Agent',
+      department: 'financials',
+      type: 'settlement',
+      schedule: 'Every 5s — carrier payment queue',
+      directive: '230',
+      auditPrefix: 'agent.settlement.',
+    },
+    {
+      name: 'dispute_agent',
+      label: 'Dispute Agent',
+      department: 'financials',
+      type: 'resolution',
+      schedule: 'Every 5s — auto-resolve < 5%',
+      directive: '230',
+      auditPrefix: 'agent.dispute.',
+    },
+  ] as const;
+
+  router.get('/api/v1/agents', requireAuth(jwtSecret), async (_req, res) => {
+    const agents = await Promise.all(
+      AGENT_REGISTRY.map(async (agent) => {
+        const lastRun = await pool.query<{ occurred_at: Date; action: string }>(
+          `SELECT occurred_at, action FROM audit_log
+           WHERE action LIKE $1 ORDER BY id DESC LIMIT 1`,
+          [`${agent.auditPrefix}%`],
+        );
+        const runCount = await pool.query<{ c: string }>(
+          `SELECT COUNT(*)::text AS c FROM audit_log WHERE action LIKE $1`,
+          [`${agent.auditPrefix}%`],
+        );
+        return {
+          ...agent,
+          status: 'active' as const,
+          lastRunAt: lastRun.rows[0]?.occurred_at?.toISOString() ?? null,
+          lastAction: lastRun.rows[0]?.action ?? null,
+          totalRuns: Number(runCount.rows[0]?.c ?? 0),
+        };
+      }),
+    );
+    res.status(200).json({ agents });
+  });
+
+  router.get('/api/v1/agents/:name/history', requireAuth(jwtSecret), async (req, res) => {
+    const raw = req.params['name'];
+    const name = typeof raw === 'string' ? raw : '';
+    const agent = AGENT_REGISTRY.find((a) => a.name === name);
+    if (!agent) {
+      res.status(404).json({ error: 'agent_not_found' });
+      return;
+    }
+    const limit = Number(req.query['limit'] ?? 30);
+    const r = await pool.query<{
+      id: string;
+      action: string;
+      target: string | null;
+      metadata: Record<string, unknown>;
+      occurred_at: Date;
+    }>(
+      `SELECT id::text, action, target, metadata, occurred_at
+       FROM audit_log WHERE action LIKE $1
+       ORDER BY id DESC LIMIT $2`,
+      [`${agent.auditPrefix}%`, Math.min(limit, 100)],
+    );
+    res.status(200).json({
+      agent,
+      runs: r.rows.map((row) => ({
+        id: row.id,
+        action: row.action,
+        target: row.target,
+        metadata: row.metadata,
+        occurredAt: row.occurred_at.toISOString(),
+        status:
+          row.action.includes('exception') ||
+          row.action.includes('failed') ||
+          row.action.includes('blocked')
+            ? 'failed'
+            : 'success',
+      })),
+    });
+  });
+
   router.get('/api/v1/scoring/weights', requireAuth(jwtSecret), (_req, res) => {
     res.status(200).json({
       weights: WEIGHTS,

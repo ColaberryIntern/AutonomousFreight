@@ -5,6 +5,7 @@ import { AutonomyConsole } from './components/AutonomyConsole';
 import { Carriers } from './components/Carriers';
 import { CompliancePage } from './components/CompliancePage';
 import { DeploymentPage } from './components/DeploymentPage';
+import { AgentsPage } from './components/AgentsPage';
 import { ErrorsPage } from './components/ErrorsPage';
 import { SecurityPage } from './components/SecurityPage';
 import { Login } from './components/Login';
@@ -22,6 +23,7 @@ type View =
   | 'queue'
   | 'shipments'
   | 'carriers'
+  | 'agents'
   | 'compliance'
   | 'errors'
   | 'deployment'
@@ -57,6 +59,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: 'CONTROL TOWER',
     items: [
+      { id: 'agents', label: 'Agents' },
       { id: 'compliance', label: 'Compliance', requiresRole: ['admin', 'auditor'] },
       { id: 'errors', label: 'Exceptions', requiresRole: ['admin'] },
     ],
@@ -243,6 +246,7 @@ export function App(): React.ReactElement {
           )}
           {view === 'shipments' && <Shipments token={token} canApprove={canApprove} />}
           {view === 'carriers' && <Carriers token={token} canSeeCompliance={canSeeCompliance} />}
+          {view === 'agents' && <AgentsPage token={token} />}
           {view === 'compliance' && <CompliancePage token={token} />}
           {view === 'errors' && <ErrorsPage token={token} />}
           {view === 'deployment' && <DeploymentPage token={token} />}
