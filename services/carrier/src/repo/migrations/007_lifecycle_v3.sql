@@ -32,3 +32,4 @@ CREATE INDEX IF NOT EXISTS idx_docs_shipment ON shipment_documents (shipment_id)
 -- Track when a shipment was assigned (for milestone timing)
 ALTER TABLE shipments ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMPTZ;
 ALTER TABLE shipments ADD COLUMN IF NOT EXISTS assigned_carrier_id UUID REFERENCES carriers (id);
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS last_agent_check_at TIMESTAMPTZ;

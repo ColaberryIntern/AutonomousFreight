@@ -6,6 +6,7 @@ import { rankCarriers } from '../domain/scoring';
 import type { CarrierRepository } from '../repo/carrierRepository';
 
 export const PROCUREMENT_AUTO_THRESHOLD = 0.7;
+const RECHECK_INTERVAL_SEC = 60;
 
 export interface ProcurementDeps {
   carrierRepo: CarrierRepository;
@@ -19,14 +20,31 @@ export interface ProcurementTickResult {
   needsReview: number;
   blocked: number;
   skipped: number;
+  cooldown: number;
 }
 
 export async function runProcurementTick(deps: ProcurementDeps): Promise<ProcurementTickResult> {
-  const result: ProcurementTickResult = { autoAssigned: 0, needsReview: 0, blocked: 0, skipped: 0 };
+  const result: ProcurementTickResult = {
+    autoAssigned: 0,
+    needsReview: 0,
+    blocked: 0,
+    skipped: 0,
+    cooldown: 0,
+  };
 
   const shipments = await deps.carrierRepo.listShipmentsByStatus('quoting', 50);
   for (const ship of shipments) {
     try {
+      const fresh = await deps.carrierRepo.pool.query<{ last_agent_check_at: Date | null }>(
+        `SELECT last_agent_check_at FROM shipments WHERE id = $1`,
+        [ship.id],
+      );
+      const lastCheck = fresh.rows[0]?.last_agent_check_at;
+      if (lastCheck && Date.now() - lastCheck.getTime() < RECHECK_INTERVAL_SEC * 1000) {
+        result.cooldown++;
+        continue;
+      }
+
       const bids = await deps.carrierRepo.listActiveBidsForShipment(ship.id);
       if (bids.length === 0) {
         result.skipped++;
@@ -46,6 +64,11 @@ export async function runProcurementTick(deps: ProcurementDeps): Promise<Procure
       }
       const snap = await deps.complianceRepo.getCarrierCompliance(top.carrierId);
       const gate = evaluateAssignmentGates({ id: carrier.id, active: carrier.active }, snap);
+
+      await deps.carrierRepo.pool.query(
+        `UPDATE shipments SET last_agent_check_at = NOW() WHERE id = $1`,
+        [ship.id],
+      );
 
       if (gate.result === 'hard') {
         void deps.audit.record({
