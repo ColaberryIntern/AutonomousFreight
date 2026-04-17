@@ -4,6 +4,7 @@ import { AuditPage } from './components/AuditPage';
 import { AutonomyConsole } from './components/AutonomyConsole';
 import { Carriers } from './components/Carriers';
 import { CompliancePage } from './components/CompliancePage';
+import { DeploymentPage } from './components/DeploymentPage';
 import { ErrorsPage } from './components/ErrorsPage';
 import { Login } from './components/Login';
 import { OpsHome } from './components/OpsHome';
@@ -22,6 +23,7 @@ type View =
   | 'carriers'
   | 'compliance'
   | 'errors'
+  | 'deployment'
   | 'audit'
   | 'admin'
   | 'autonomy';
@@ -40,6 +42,7 @@ const NAV: NavItem[] = [
   { id: 'carriers', label: 'Carriers' },
   { id: 'compliance', label: 'Compliance', requiresRole: ['admin', 'auditor'] },
   { id: 'errors', label: 'Errors', requiresRole: ['admin'] },
+  { id: 'deployment', label: 'Deploy', requiresRole: ['admin'] },
   { id: 'audit', label: 'Audit', requiresRole: ['admin'] },
   { id: 'admin', label: 'Admin', requiresRole: ['admin'] },
   { id: 'autonomy', label: 'Autonomy' },
@@ -120,6 +123,7 @@ export function App(): React.ReactElement {
           {view === 'carriers' && <Carriers token={token} canSeeCompliance={canSeeCompliance} />}
           {view === 'compliance' && <CompliancePage token={token} />}
           {view === 'errors' && <ErrorsPage token={token} />}
+          {view === 'deployment' && <DeploymentPage token={token} />}
           {view === 'audit' && <AuditPage token={token} />}
           {view === 'admin' && <AdminPage token={token} />}
           {view === 'autonomy' && <AutonomyConsole token={token} />}
