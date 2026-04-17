@@ -30,6 +30,9 @@ export const styles: Record<string, React.CSSProperties> = {
     color: 'white',
     padding: '16px 0',
     flexShrink: 0,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    overflow: 'auto' as const,
   },
   sidebarBrand: { fontWeight: 700, fontSize: 18, padding: '8px 20px 20px' },
   sidebarLink: {
