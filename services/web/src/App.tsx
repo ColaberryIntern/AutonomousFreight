@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdminPage } from './components/AdminPage';
 import { AuditPage } from './components/AuditPage';
 import { AutonomyConsole } from './components/AutonomyConsole';
@@ -133,13 +133,37 @@ function clearSession(): void {
   localStorage.removeItem('af_user');
 }
 
+const ALL_VIEWS: View[] = [
+  'ops', 'quotes', 'queue', 'shipments', 'carriers', 'agents',
+  'compliance', 'errors', 'deployment', 'security', 'audit', 'admin', 'autonomy',
+];
+
+function viewFromHash(): View {
+  const h = window.location.hash.replace('#/', '').replace('#', '');
+  if (ALL_VIEWS.includes(h as View)) return h as View;
+  return 'ops';
+}
+
+function setHash(view: View): void {
+  window.location.hash = `#/${view}`;
+}
+
 export function App(): React.ReactElement {
   const saved = loadSession();
   const [token, setToken] = useState<string | null>(saved?.token ?? null);
   const [user, setUser] = useState<User | null>(saved?.user ?? null);
-  const [view, setView] = useState<View>('ops');
+  const [view, setView] = useState<View>(viewFromHash);
   const [queueInspect, setQueueInspect] = useState<string | null>(null);
   const [systemExpanded, setSystemExpanded] = useState(false);
+
+  // Sync hash → state on back/forward
+  useEffect(() => {
+    function onHashChange(): void {
+      setView(viewFromHash());
+    }
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   if (!token || !user) {
     return (
@@ -198,7 +222,7 @@ export function App(): React.ReactElement {
                           ? { color: 'rgba(255,255,255,0.55)', fontSize: 13 }
                           : {}),
                       }}
-                      onClick={() => setView(n.id)}
+                      onClick={() => { setHash(n.id); setView(n.id); }}
                     >
                       {n.label}
                       {n.id === 'errors' && (
