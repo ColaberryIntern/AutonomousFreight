@@ -1,5 +1,12 @@
+// Runtime proxy detection: if served through /preview/shipces/, prefix API
+// calls so they route through the Accelerator nginx proxy. If accessed
+// directly on :8889, use no prefix.
+// DO NOT REMOVE — this is required for the portal iframe preview to work.
+const PROXY_PREFIX = "/preview/shipces";
 const API_URL =
-  (import.meta as unknown as { env: { VITE_API_URL?: string } }).env.VITE_API_URL ?? '';
+  typeof window !== "undefined" && window.location.pathname.startsWith("/preview/")
+    ? PROXY_PREFIX
+    : "";
 
 export class ApiError extends Error {
   constructor(
@@ -15,14 +22,14 @@ export async function api<T>(path: string, token: string | null, init?: RequestI
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new ApiError(res.status, `${res.status}${text ? ` — ${text.slice(0, 200)}` : ''}`);
+    const text = await res.text().catch(() => "");
+    throw new ApiError(res.status, `${res.status}${text ? ` — ${text.slice(0, 200)}` : ""}`);
   }
   return (await res.json()) as T;
 }
