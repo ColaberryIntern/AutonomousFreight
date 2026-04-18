@@ -110,9 +110,33 @@ const collapseToggle: React.CSSProperties = {
   alignItems: 'center',
 };
 
+function loadSession(): { token: string; user: User } | null {
+  try {
+    const t = localStorage.getItem('af_token');
+    const u = localStorage.getItem('af_user');
+    if (t && u) return { token: t, user: JSON.parse(u) as User };
+  } catch {
+    // corrupt storage — clear it
+    localStorage.removeItem('af_token');
+    localStorage.removeItem('af_user');
+  }
+  return null;
+}
+
+function saveSession(token: string, user: User): void {
+  localStorage.setItem('af_token', token);
+  localStorage.setItem('af_user', JSON.stringify(user));
+}
+
+function clearSession(): void {
+  localStorage.removeItem('af_token');
+  localStorage.removeItem('af_user');
+}
+
 export function App(): React.ReactElement {
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const saved = loadSession();
+  const [token, setToken] = useState<string | null>(saved?.token ?? null);
+  const [user, setUser] = useState<User | null>(saved?.user ?? null);
   const [view, setView] = useState<View>('ops');
   const [queueInspect, setQueueInspect] = useState<string | null>(null);
   const [systemExpanded, setSystemExpanded] = useState(false);
@@ -121,6 +145,7 @@ export function App(): React.ReactElement {
     return (
       <Login
         onLogin={(t, u) => {
+          saveSession(t, u);
           setToken(t);
           setUser(u);
         }}
@@ -231,6 +256,7 @@ export function App(): React.ReactElement {
           <button
             style={styles.btnGhost}
             onClick={() => {
+              clearSession();
               setToken(null);
               setUser(null);
             }}
