@@ -1,18 +1,135 @@
-import React from 'react';
-import { colors, pill, styles } from '../styles';
+import React, { useEffect, useState } from 'react';
+import { colors, pill, styles, relativeTime } from '../styles';
 
-interface Props {
-  token: string;
+interface SecurityKpis {
+  mfaAdoptionPct: number;
+  loginFailures24h: number;
+  loginSuccesses24h: number;
+  gateHardBlocks7d: number;
+  gateSoftOverrides7d: number;
+  agentExceptions24h: number;
+  totalUsers: number;
+  mfaEnabledUsers: number;
 }
 
-export function SecurityPage({ _token }: { _token: Props['token'] }): React.ReactElement {
+interface TrendAlert {
+  metric: string;
+  currentHour: number;
+  avgPrior: number;
+  severity: 'warning' | 'critical';
+}
+
+interface AuditEvent {
+  id: string;
+  action: string;
+  target?: string;
+  metadata: Record<string, unknown>;
+  occurredAt: string;
+}
+
+async function api<T>(path: string, token: string): Promise<T> {
+  const r = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json() as Promise<T>;
+}
+
+export function SecurityPage({ token }: { token: string }): React.ReactElement {
+  const [kpis, setKpis] = useState<SecurityKpis | null>(null);
+  const [alerts, setAlerts] = useState<TrendAlert[]>([]);
+  const [recentEvents, setRecentEvents] = useState<AuditEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load(): Promise<void> {
+      try {
+        const [k, t, e] = await Promise.all([
+          api<SecurityKpis>('/api/v1/security/kpis', token),
+          api<{ alerts: TrendAlert[] }>('/api/v1/security/trends', token),
+          api<{ items: AuditEvent[] }>('/api/v1/audit/logs?limit=10&action=auth.login.failure', token),
+        ]);
+        if (cancelled) return;
+        setKpis(k);
+        setAlerts(t.alerts);
+        setRecentEvents(e.items);
+      } catch {
+        // non-admin users won't have access — leave empty
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    const interval = setInterval(() => void load(), 30_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [token]);
+
   return (
     <>
       <h1 style={styles.h1}>Security & Penetration Testing</h1>
       <p style={{ fontSize: 13, color: colors.textMuted, marginTop: -8, marginBottom: 16 }}>
-        Security posture, automated pen-test harness, and test suite status.
+        Security posture, KPIs, trend alerts, and test suite status.
       </p>
 
+      {/* Live KPI cards */}
+      {kpis && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+          <KpiCard label="MFA adoption" value={`${kpis.mfaAdoptionPct}%`} hint={`${kpis.mfaEnabledUsers} / ${kpis.totalUsers} users`} color={kpis.mfaAdoptionPct >= 80 ? colors.success : kpis.mfaAdoptionPct >= 50 ? colors.warn : colors.danger} />
+          <KpiCard label="Login failures (24h)" value={String(kpis.loginFailures24h)} hint={`${kpis.loginSuccesses24h} successes`} color={kpis.loginFailures24h > 10 ? colors.danger : kpis.loginFailures24h > 3 ? colors.warn : colors.success} />
+          <KpiCard label="Gate hard blocks (7d)" value={String(kpis.gateHardBlocks7d)} color={kpis.gateHardBlocks7d > 0 ? colors.warn : colors.success} />
+          <KpiCard label="Gate overrides (7d)" value={String(kpis.gateSoftOverrides7d)} color={kpis.gateSoftOverrides7d > 5 ? colors.danger : colors.success} />
+          <KpiCard label="Agent exceptions (24h)" value={String(kpis.agentExceptions24h)} color={kpis.agentExceptions24h > 0 ? colors.warn : colors.success} />
+        </div>
+      )}
+
+      {loading && !kpis && (
+        <div style={{ ...styles.card, textAlign: 'center' as const, color: colors.textMuted, fontSize: 13 }}>
+          Loading security metrics...
+        </div>
+      )}
+
+      {/* Trend alerts */}
+      {alerts.length > 0 && (
+        <div style={{ ...styles.card, borderLeft: `4px solid ${colors.danger}`, marginBottom: 16 }}>
+          <h3 style={styles.h3}>Trend alerts</h3>
+          {alerts.map((a, i) => (
+            <div key={i} style={{ padding: '6px 0', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={pill(a.severity === 'critical' ? colors.danger : colors.warn)}>
+                {a.severity}
+              </span>
+              <span>
+                <strong>{a.metric}</strong>: {a.currentHour} this hour vs {a.avgPrior} avg prior
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Recent failed logins */}
+      {recentEvents.length > 0 && (
+        <div style={{ ...styles.card, marginBottom: 16 }}>
+          <h3 style={styles.h3}>Recent failed logins</h3>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Time</th>
+                <th style={styles.th}>Email</th>
+                <th style={styles.th}>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentEvents.map((ev) => (
+                <tr key={ev.id}>
+                  <td style={{ ...styles.td, fontSize: 12 }}>{relativeTime(ev.occurredAt)}</td>
+                  <td style={{ ...styles.td, fontSize: 12 }}>{String(ev.metadata?.['email'] ?? '—')}</td>
+                  <td style={{ ...styles.td, fontSize: 12 }}>{String(ev.metadata?.['reason'] ?? '—')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Existing security controls table */}
       <div style={styles.card}>
         <h3 style={styles.h3}>Security controls</h3>
         <table style={styles.table}>
@@ -45,7 +162,7 @@ export function SecurityPage({ _token }: { _token: Props['token'] }): React.Reac
               [
                 'Audit trail',
                 'Active',
-                'Immutable append-only log, 10,834+ entries, actor + target + metadata',
+                'Immutable append-only log with auth event tracking',
               ],
               [
                 'Token revocation',
@@ -190,5 +307,15 @@ export function SecurityPage({ _token }: { _token: Props['token'] }): React.Reac
         </table>
       </div>
     </>
+  );
+}
+
+function KpiCard({ label, value, hint, color }: { label: string; value: string; hint?: string; color: string }): React.ReactElement {
+  return (
+    <div style={{ ...styles.stat, borderTop: `3px solid ${color}` }}>
+      <div style={styles.statLabel}>{label}</div>
+      <div style={{ ...styles.statValue, color }}>{value}</div>
+      {hint && <div style={styles.statHint}>{hint}</div>}
+    </div>
   );
 }

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Pool } from 'pg';
 import { z } from 'zod';
 import { evaluateAssignmentGates } from '../../../compliance/src/domain/gates';
+import { computeRiskScore, type ComplianceSnapshot } from '../../../compliance/src/domain/riskScore';
 import { ComplianceRepository } from '../../../compliance/src/repo/complianceRepository';
 import type { EventBus } from '../../../events/src/types';
 import { requireAuth, requireRole } from '../../../user/src/api/authMiddleware';
@@ -311,6 +312,41 @@ export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps):
       const snap = await complianceRepo.getCarrierCompliance(carrierId);
       const evalResult = evaluateAssignmentGates({ id: carrier.id, active: carrier.active }, snap);
       res.status(200).json(evalResult);
+    },
+  );
+
+  const SimulateGateBody = z.object({
+    carrierId: z.string().regex(UUID_RE),
+    snapshot: z.object({
+      operatingStatus: z.enum(['active', 'out_of_service', 'unknown']),
+      safetyRating: z.enum(['satisfactory', 'conditional', 'unsatisfactory', 'unrated']),
+      insuranceOnFile: z.boolean(),
+      snapshotAgeDays: z.number().min(0),
+    }),
+  });
+
+  router.post(
+    '/api/v1/security/simulate-gate',
+    requireAuth(jwtSecret),
+    requireRole('admin', 'broker'),
+    async (req, res) => {
+      const parsed = SimulateGateBody.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'invalid_input', details: parsed.error.issues });
+        return;
+      }
+      const carrier = await repo.findCarrierById(parsed.data.carrierId);
+      if (!carrier) {
+        res.status(404).json({ error: 'carrier_not_found' });
+        return;
+      }
+      const hypothetical: ComplianceSnapshot = parsed.data.snapshot;
+      const gateResult = evaluateAssignmentGates(
+        { id: carrier.id, active: carrier.active },
+        hypothetical,
+      );
+      const riskScore = computeRiskScore(hypothetical);
+      res.status(200).json({ gate: gateResult, riskScore, simulated: true });
     },
   );
 

@@ -2,12 +2,14 @@ import type { Request, Response } from 'express';
 import { issueAccessToken } from '../domain/jwt';
 import { verifyPassword } from '../domain/password';
 import { LoginSchema } from '../domain/validation';
+import type { AuditRepository } from '../repo/auditRepository';
 import type { UserRepository } from '../repo/userRepository';
 
 interface LoginDeps {
   repo: UserRepository;
   jwtSecret: string;
   jwtTtl: string;
+  audit?: AuditRepository;
 }
 
 const DUMMY_HASH = '$2a$12$CwTycUXWue0Thq9StjUM0uJ8.4R4q/2Hj5pQf7Z8bPeOq8rV0vG3q';
@@ -21,7 +23,7 @@ function ttlToSeconds(ttl: string): number {
   return value * (multipliers[unit ?? 's'] ?? 1);
 }
 
-export function loginController({ repo, jwtSecret, jwtTtl }: LoginDeps) {
+export function loginController({ repo, jwtSecret, jwtTtl, audit }: LoginDeps) {
   return async function handleLogin(req: Request, res: Response): Promise<void> {
     const parsed = LoginSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -34,12 +36,25 @@ export function loginController({ repo, jwtSecret, jwtTtl }: LoginDeps) {
       const hashToCompare = user?.passwordHash ?? DUMMY_HASH;
       const ok = await verifyPassword(password, hashToCompare);
       if (!user || !ok) {
+        if (audit) {
+          void audit.record({
+            action: 'auth.login.failure',
+            metadata: { email, reason: !user ? 'unknown_email' : 'bad_password' },
+          });
+        }
         res.status(401).json({ error: 'invalid_credentials' });
         return;
       }
       if (user.mfaEnabled) {
         res.status(200).json({ mfaRequired: true });
         return;
+      }
+      if (audit) {
+        void audit.record({
+          action: 'auth.login.success',
+          actorUserId: user.id,
+          metadata: { email },
+        });
       }
       const token = issueAccessToken(
         { sub: user.id, email: user.email, roles: user.roles },

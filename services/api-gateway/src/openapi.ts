@@ -310,6 +310,44 @@ export function buildOpenApiDoc(): OpenApiDoc {
           },
         },
       },
+      '/api/v1/security/kpis': {
+        get: {
+          summary: 'Security KPIs — MFA adoption, login failures, gate blocks, agent exceptions',
+          tags: ['security'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Security KPIs' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+          },
+        },
+      },
+      '/api/v1/security/trends': {
+        get: {
+          summary: 'Security event trends bucketed by hour with anomaly alerts (?hours=24)',
+          tags: ['security'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Trend buckets + alerts' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+          },
+        },
+      },
+      '/api/v1/security/simulate-gate': {
+        post: {
+          summary: 'Simulate compliance gate with hypothetical snapshot (no side effects)',
+          tags: ['security'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Simulated gate result + risk score' },
+            '400': { description: 'Invalid input' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+            '404': { description: 'Carrier not found' },
+          },
+        },
+      },
     },
   };
 }

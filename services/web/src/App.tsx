@@ -300,7 +300,7 @@ export function App(): React.ReactElement {
           {view === 'compliance' && <CompliancePage token={token} />}
           {view === 'errors' && <ErrorsPage token={token} />}
           {view === 'deployment' && <DeploymentPage token={token} />}
-          {view === 'security' && <SecurityPage _token={token} />}
+          {view === 'security' && <SecurityPage token={token} />}
           {view === 'audit' && <AuditPage token={token} />}
           {view === 'admin' && <AdminPage token={token} />}
           {view === 'autonomy' && <AutonomyConsole token={token} />}

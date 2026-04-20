@@ -5,6 +5,8 @@ import { requireAuth, requireRole } from './authMiddleware';
 import { loginController } from './loginController';
 import { enrollMfaController, mfaLoginController, verifyMfaController } from './mfaController';
 import { registerController } from './registerController';
+import { computeSecurityKpis } from '../domain/securityKpis';
+import { computeSecurityTrends } from '../domain/securityTrends';
 import { AuditRepository } from '../repo/auditRepository';
 import { UserRepository } from '../repo/userRepository';
 
@@ -28,7 +30,7 @@ export function buildServer({ pool, jwtSecret, jwtTtl, bus, mfaKek }: ServerDeps
   });
 
   app.post('/auth/register', registerController(bus ? { repo, bus } : { repo }));
-  app.post('/auth/login', loginController({ repo, jwtSecret, jwtTtl }));
+  app.post('/auth/login', loginController({ repo, jwtSecret, jwtTtl, audit }));
 
   if (mfaKek) {
     const mfaDeps = { repo, audit, jwtSecret, jwtTtl, kek: mfaKek };
@@ -72,6 +74,28 @@ export function buildServer({ pool, jwtSecret, jwtTtl, bus, mfaKek }: ServerDeps
       const action = typeof req.query['action'] === 'string' ? req.query['action'] : undefined;
       const items = await audit.listPage(action ? { limit, offset, action } : { limit, offset });
       res.status(200).json({ items });
+    },
+  );
+
+  app.get(
+    '/api/v1/security/kpis',
+    requireAuth(jwtSecret),
+    requireRole('admin'),
+    async (_req: Request, res: Response) => {
+      const kpis = await computeSecurityKpis(pool);
+      res.status(200).json(kpis);
+    },
+  );
+
+  app.get(
+    '/api/v1/security/trends',
+    requireAuth(jwtSecret),
+    requireRole('admin'),
+    async (req: Request, res: Response) => {
+      const hours = Number(req.query['hours'] ?? 24);
+      const clamped = Math.min(Math.max(hours, 1), 168);
+      const trends = await computeSecurityTrends(pool, clamped);
+      res.status(200).json(trends);
     },
   );
 
