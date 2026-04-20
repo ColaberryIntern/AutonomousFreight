@@ -348,6 +348,60 @@ export function buildOpenApiDoc(): OpenApiDoc {
           },
         },
       },
+      '/api/v1/consent': {
+        get: {
+          summary: 'Check current user consent status',
+          tags: ['privacy'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Consent status' },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+        post: {
+          summary: 'Grant consent for data processing (records version + timestamp)',
+          tags: ['privacy'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Consent granted' },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+      },
+      '/api/v1/billing/usage': {
+        get: {
+          summary: 'Current-period usage counters (API calls, shipments, agent runs)',
+          tags: ['billing'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Usage metrics' },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+      },
+      '/api/v1/financials/reconciliation': {
+        get: {
+          summary: 'Invoice vs settlement reconciliation summary (admin/broker)',
+          tags: ['financials'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Reconciliation summary' },
+            '401': { description: 'Unauthorized' },
+            '403': { description: 'Forbidden role' },
+          },
+        },
+      },
+      '/api/v1/platform/features': {
+        get: {
+          summary: 'Platform feature inventory — all capabilities by category',
+          tags: ['platform'],
+          security: [{ bearer: [] }],
+          responses: {
+            '200': { description: 'Feature inventory' },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+      },
     },
   };
 }

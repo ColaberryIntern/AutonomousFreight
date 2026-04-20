@@ -29,6 +29,8 @@ export class UserRepository {
     await this.pool.query(init);
     const mfa = readFileSync(join(__dirname, 'migrations', '004_mfa_and_audit.sql'), 'utf8');
     await this.pool.query(mfa);
+    const consent = readFileSync(join(__dirname, 'migrations', '010_consent.sql'), 'utf8');
+    await this.pool.query(consent);
   }
 
   async findById(userId: string): Promise<UserRecord | null> {

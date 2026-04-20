@@ -6,7 +6,7 @@ describe('StripeBillingDriver construction', () => {
       () =>
         new StripeBillingDriver({
           apiKey: '',
-          priceIds: { basic: 'p_b', pro: 'p_p', enterprise: 'p_e' },
+          priceIds: { trial: 'p_t', basic: 'p_b', pro: 'p_p', enterprise: 'p_e' },
         }),
     ).toThrow();
   });
@@ -16,7 +16,7 @@ describe('StripeBillingDriver construction', () => {
       () =>
         new StripeBillingDriver({
           apiKey: 'pk_publishable',
-          priceIds: { basic: 'p_b', pro: 'p_p', enterprise: 'p_e' },
+          priceIds: { trial: 'p_t', basic: 'p_b', pro: 'p_p', enterprise: 'p_e' },
         }),
     ).toThrow();
   });
@@ -26,7 +26,7 @@ describe('StripeBillingDriver construction', () => {
       () =>
         new StripeBillingDriver({
           apiKey: 'sk_test_xxx',
-          priceIds: { basic: '', pro: 'p_p', enterprise: 'p_e' },
+          priceIds: { trial: 'p_t', basic: '', pro: 'p_p', enterprise: 'p_e' },
         }),
     ).toThrow();
   });
@@ -34,7 +34,7 @@ describe('StripeBillingDriver construction', () => {
   it('constructs with valid config but rejects calls (Sprint-18 gate)', () => {
     const d = new StripeBillingDriver({
       apiKey: 'sk_test_xxx',
-      priceIds: { basic: 'p_b', pro: 'p_p', enterprise: 'p_e' },
+      priceIds: { trial: 'p_t', basic: 'p_b', pro: 'p_p', enterprise: 'p_e' },
     });
     expect(() => d.subscribe('c', 'pro')).toThrow();
     expect(() => d.cancel('c')).toThrow();

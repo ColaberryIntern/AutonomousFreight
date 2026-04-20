@@ -5,6 +5,8 @@ import { requireAuth, requireRole } from './authMiddleware';
 import { loginController } from './loginController';
 import { enrollMfaController, mfaLoginController, verifyMfaController } from './mfaController';
 import { registerController } from './registerController';
+import { getUsage } from '../../../billing/src/domain/usage';
+import { buildConsentStatus, CURRENT_CONSENT_VERSION } from '../domain/consent';
 import { computeSecurityKpis } from '../domain/securityKpis';
 import { computeSecurityTrends } from '../domain/securityTrends';
 import { AuditRepository } from '../repo/auditRepository';
@@ -76,6 +78,52 @@ export function buildServer({ pool, jwtSecret, jwtTtl, bus, mfaKek }: ServerDeps
       res.status(200).json({ items });
     },
   );
+
+  app.get('/api/v1/consent', requireAuth(jwtSecret), async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'unauthorized' });
+      return;
+    }
+    const r = await pool.query<{ consent_version: string | null; consent_given_at: Date | null }>(
+      'SELECT consent_version, consent_given_at FROM users WHERE id = $1',
+      [userId],
+    );
+    const row = r.rows[0];
+    res.status(200).json(
+      buildConsentStatus(
+        row?.consent_version ?? null,
+        row?.consent_given_at?.toISOString() ?? null,
+      ),
+    );
+  });
+
+  app.post('/api/v1/consent', requireAuth(jwtSecret), async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'unauthorized' });
+      return;
+    }
+    await pool.query(
+      `UPDATE users SET consent_version = $1, consent_given_at = NOW() WHERE id = $2`,
+      [CURRENT_CONSENT_VERSION, userId],
+    );
+    void audit.record({
+      actorUserId: userId,
+      action: 'user.consent.granted',
+      metadata: { version: CURRENT_CONSENT_VERSION },
+    });
+    res.status(200).json({ ok: true, version: CURRENT_CONSENT_VERSION });
+  });
+
+  app.get('/api/v1/billing/usage', requireAuth(jwtSecret), (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'unauthorized' });
+      return;
+    }
+    res.status(200).json({ usage: getUsage(userId) });
+  });
 
   app.get(
     '/api/v1/security/kpis',

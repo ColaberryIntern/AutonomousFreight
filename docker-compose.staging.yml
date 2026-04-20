@@ -1,0 +1,89 @@
+# Autonomous Freight — staging stack.
+# Mirrors production but with staging-specific defaults:
+#   - Separate DB name (freight_staging)
+#   - Debug logging enabled
+#   - Email driver set to capture (no real sends)
+#   - Tracking simulation enabled
+#
+# Deploy with:
+#   docker compose -p af-staging -f docker-compose.staging.yml up -d --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: af-staging-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-freight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-staging_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-freight_staging}
+    volumes:
+      - af-staging-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-freight}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: af-staging-redis
+    restart: unless-stopped
+    volumes:
+      - af-staging-redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: af-staging-gateway
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      NODE_ENV: staging
+      GATEWAY_PORT: 3000
+      LOG_LEVEL: debug
+      DATABASE_URL: postgres://${POSTGRES_USER:-freight}:${POSTGRES_PASSWORD:-staging_pass}@postgres:5432/${POSTGRES_DB:-freight_staging}
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-staging-secret-min-16ch}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      EMAIL_DRIVER: capture
+      MFA_KEK: ${MFA_KEK:-}
+      FEATURE_GA_OPTIMIZER: ${FEATURE_GA_OPTIMIZER:-false}
+      FEATURE_TRACKING_SIM: 'true'
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    expose:
+      - '3000'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    container_name: af-staging-nginx
+    restart: unless-stopped
+    depends_on:
+      gateway: { condition: service_healthy }
+    ports:
+      - '${PUBLIC_PORT:-8890}:80'
+
+volumes:
+  af-staging-postgres:
+  af-staging-redis:
+
+networks:
+  default:
+    name: af-staging-net

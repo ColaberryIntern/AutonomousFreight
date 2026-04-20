@@ -7,6 +7,7 @@ import { ComplianceRepository } from '../../../compliance/src/repo/complianceRep
 import type { EventBus } from '../../../events/src/types';
 import { requireAuth, requireRole } from '../../../user/src/api/authMiddleware';
 import { AuditRepository } from '../../../user/src/repo/auditRepository';
+import { computeReconciliation } from '../domain/reconciliation';
 import { rankCarriers, WEIGHTS } from '../domain/scoring';
 import { CarrierRepository } from '../repo/carrierRepository';
 import { selectCarrierController } from './selectCarrierController';
@@ -482,6 +483,51 @@ export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps):
         artifactsExpired: summary.artifactsExpiring.expired,
       },
       auditEventsLast24h: auditSince,
+    });
+  });
+
+  router.get(
+    '/api/v1/financials/reconciliation',
+    requireAuth(jwtSecret),
+    requireRole('admin', 'broker'),
+    async (_req, res) => {
+      const [inv, stl, dsp] = await Promise.all([
+        pool.query<{ cnt: string; total: string }>(
+          `SELECT COUNT(*)::text AS cnt, COALESCE(SUM(amount_usd), 0)::text AS total FROM invoices`,
+        ),
+        pool.query<{ cnt: string; total: string }>(
+          `SELECT COUNT(*)::text AS cnt, COALESCE(SUM(amount_usd), 0)::text AS total FROM settlements WHERE status = 'paid'`,
+        ),
+        pool.query<{ cnt: string; total: string }>(
+          `SELECT COUNT(*)::text AS cnt, COALESCE(SUM(amount_usd), 0)::text AS total FROM disputes`,
+        ),
+      ]);
+      const summary = computeReconciliation({
+        invoiceCount: Number(inv.rows[0]?.cnt ?? 0),
+        settledCount: Number(stl.rows[0]?.cnt ?? 0),
+        disputeCount: Number(dsp.rows[0]?.cnt ?? 0),
+        totalInvoicedUsd: Number(inv.rows[0]?.total ?? 0),
+        totalSettledUsd: Number(stl.rows[0]?.total ?? 0),
+        totalDisputedUsd: Number(dsp.rows[0]?.total ?? 0),
+      });
+      res.status(200).json(summary);
+    },
+  );
+
+  router.get('/api/v1/platform/features', requireAuth(jwtSecret), (_req, res) => {
+    res.status(200).json({
+      platform: 'Autonomous Freight',
+      version: '1.0.0',
+      capabilities: [
+        { category: 'AI Agents', features: ['Quoting', 'Procurement', 'Tracking', 'Document Extraction', 'Rate Audit', 'Invoicing', 'Payment Match', 'Settlement', 'Dispute Resolution'], count: 9 },
+        { category: 'Compliance', features: ['Hard/soft gates', 'Risk scoring', 'Artifact tracking', 'FMCSA safety ratings', 'Expiration alerts'], count: 5 },
+        { category: 'Security', features: ['JWT auth', 'RBAC (4 roles)', 'TOTP MFA', 'AES-256-GCM encryption', 'Audit logging', 'Rate limiting', 'Security headers'], count: 7 },
+        { category: 'Financial', features: ['Invoice generation', 'Settlement processing', 'Three-way payment match', 'Dispute auto-resolution', 'Margin analysis'], count: 5 },
+        { category: 'Operations', features: ['Shipment lifecycle', 'Carrier ranking', 'RFQ pipeline', 'Milestone tracking', 'Dashboard analytics'], count: 5 },
+        { category: 'Privacy', features: ['Data anonymization', 'Consent management', 'PII redaction'], count: 3 },
+        { category: 'Infrastructure', features: ['Docker deployment', 'CI/CD pipelines', 'Prometheus metrics', 'OpenTelemetry tracing', 'Redis caching'], count: 5 },
+      ],
+      totalFeatures: 39,
     });
   });
 
