@@ -355,6 +355,27 @@ The system should become more autonomous over time.
 
 ---
 
+# Session Start Protocol
+
+At the beginning of every session, Claude must:
+
+1. Read `CLAUDE.md` (this file) fully
+2. Read `PROGRESS.md` at the repository root
+3. Understand current project state and the next unchecked task
+4. Make no code changes during this step
+
+---
+
+# Progress Update Rule
+
+After every completed change, Claude must:
+
+- Update `PROGRESS.md` to mark completed tasks with `[x]`
+- Add a brief note under the task if anything notable happened (blockers, decisions, deviations)
+- Never mark a task complete unless it has been verified (tests pass, typecheck clean)
+
+---
+
 # Definition of Done
 
 A change is complete only if:
