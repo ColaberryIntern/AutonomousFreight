@@ -1,21 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { AdminPage } from './components/AdminPage';
-import { AuditPage } from './components/AuditPage';
-import { AutonomyConsole } from './components/AutonomyConsole';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Carriers } from './components/Carriers';
-import { CompliancePage } from './components/CompliancePage';
-import { DeploymentPage } from './components/DeploymentPage';
-import { AgentsPage } from './components/AgentsPage';
-import { ErrorsPage } from './components/ErrorsPage';
-import { SecurityPage } from './components/SecurityPage';
 import { Login } from './components/Login';
-import { OpsHome } from './components/OpsHome';
 import { Queue } from './components/Queue';
 import { Quotes } from './components/Quotes';
 import { Shipments } from './components/Shipments';
 import { ShipmentDrawer } from './components/ShipmentDrawer';
 import { colors, styles } from './styles';
 import type { User } from './types';
+
+// Lazy-load heavy views to reduce initial bundle size
+const OpsHome = React.lazy(() => import('./components/OpsHome').then(m => ({ default: m.OpsHome })));
+const AgentsPage = React.lazy(() => import('./components/AgentsPage').then(m => ({ default: m.AgentsPage })));
+const CompliancePage = React.lazy(() => import('./components/CompliancePage').then(m => ({ default: m.CompliancePage })));
+const SecurityPage = React.lazy(() => import('./components/SecurityPage').then(m => ({ default: m.SecurityPage })));
+const DeploymentPage = React.lazy(() => import('./components/DeploymentPage').then(m => ({ default: m.DeploymentPage })));
+const ErrorsPage = React.lazy(() => import('./components/ErrorsPage').then(m => ({ default: m.ErrorsPage })));
+const AuditPage = React.lazy(() => import('./components/AuditPage').then(m => ({ default: m.AuditPage })));
+const AdminPage = React.lazy(() => import('./components/AdminPage').then(m => ({ default: m.AdminPage })));
+const AutonomyConsole = React.lazy(() => import('./components/AutonomyConsole').then(m => ({ default: m.AutonomyConsole })));
 
 type View =
   | 'ops'
@@ -289,21 +291,23 @@ export function App(): React.ReactElement {
           </button>
         </div>
         <div style={styles.content}>
-          {view === 'ops' && <OpsHome token={token} isAdmin={isAdmin} />}
-          {view === 'quotes' && <Quotes token={token} canApprove={canApprove} />}
-          {view === 'queue' && (
-            <Queue token={token} canApprove={canApprove} onDetail={(id) => setQueueInspect(id)} />
-          )}
-          {view === 'shipments' && <Shipments token={token} canApprove={canApprove} />}
-          {view === 'carriers' && <Carriers token={token} canSeeCompliance={canSeeCompliance} />}
-          {view === 'agents' && <AgentsPage token={token} />}
-          {view === 'compliance' && <CompliancePage token={token} />}
-          {view === 'errors' && <ErrorsPage token={token} />}
-          {view === 'deployment' && <DeploymentPage token={token} />}
-          {view === 'security' && <SecurityPage token={token} />}
-          {view === 'audit' && <AuditPage token={token} />}
-          {view === 'admin' && <AdminPage token={token} />}
-          {view === 'autonomy' && <AutonomyConsole token={token} />}
+          <Suspense fallback={<div style={{ padding: 24, color: colors.textMuted, fontSize: 13 }}>Loading...</div>}>
+            {view === 'ops' && <OpsHome token={token} isAdmin={isAdmin} />}
+            {view === 'quotes' && <Quotes token={token} canApprove={canApprove} />}
+            {view === 'queue' && (
+              <Queue token={token} canApprove={canApprove} onDetail={(id) => setQueueInspect(id)} />
+            )}
+            {view === 'shipments' && <Shipments token={token} canApprove={canApprove} />}
+            {view === 'carriers' && <Carriers token={token} canSeeCompliance={canSeeCompliance} />}
+            {view === 'agents' && <AgentsPage token={token} />}
+            {view === 'compliance' && <CompliancePage token={token} />}
+            {view === 'errors' && <ErrorsPage token={token} />}
+            {view === 'deployment' && <DeploymentPage token={token} />}
+            {view === 'security' && <SecurityPage token={token} />}
+            {view === 'audit' && <AuditPage token={token} />}
+            {view === 'admin' && <AdminPage token={token} />}
+            {view === 'autonomy' && <AutonomyConsole token={token} />}
+          </Suspense>
         </div>
       </div>
       {queueInspect && (

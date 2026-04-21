@@ -63,6 +63,11 @@ async function main(): Promise<void> {
     'utf8',
   );
   await pool.query(settleSql);
+  const perfIndexSql = readFileSync(
+    join(__dirname, '../../carrier/src/repo/migrations/011_performance_indexes.sql'),
+    'utf8',
+  );
+  await pool.query(perfIndexSql);
 
   const bus: EventBus = new InMemoryEventBus();
   const driver = buildEmailDriver(process.env);

@@ -1,10 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+import type { CacheMetrics } from '../../../platform/src/cache/cache';
 
 export interface MetricsBundle {
   registry: Registry;
   requestsTotal: Counter<'method' | 'route' | 'status'>;
   requestDurationSeconds: Histogram<'method' | 'route' | 'status'>;
+  cacheMetrics: CacheMetrics;
 }
 
 export function buildMetrics(): MetricsBundle {
@@ -26,7 +28,31 @@ export function buildMetrics(): MetricsBundle {
     registers: [registry],
   });
 
-  return { registry, requestsTotal, requestDurationSeconds };
+  const cacheHits = new Counter({
+    name: 'cache_hits_total',
+    help: 'Total cache hits.',
+    registers: [registry],
+  });
+
+  const cacheMisses = new Counter({
+    name: 'cache_misses_total',
+    help: 'Total cache misses.',
+    registers: [registry],
+  });
+
+  const cacheErrors = new Counter({
+    name: 'cache_errors_total',
+    help: 'Total cache errors.',
+    registers: [registry],
+  });
+
+  const cacheMetrics: CacheMetrics = {
+    hit: () => cacheHits.inc(),
+    miss: () => cacheMisses.inc(),
+    error: () => cacheErrors.inc(),
+  };
+
+  return { registry, requestsTotal, requestDurationSeconds, cacheMetrics };
 }
 
 function resolveRoute(req: Request): string {

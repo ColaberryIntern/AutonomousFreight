@@ -3,6 +3,8 @@ import type { Pool } from 'pg';
 import { z } from 'zod';
 import { evaluateAssignmentGates } from '../../../compliance/src/domain/gates';
 import { computeRiskScore, type ComplianceSnapshot } from '../../../compliance/src/domain/riskScore';
+import type { Cache } from '../../../platform/src/cache/cache';
+import { wrap } from '../../../platform/src/cache/cache';
 import { ComplianceRepository } from '../../../compliance/src/repo/complianceRepository';
 import type { EventBus } from '../../../events/src/types';
 import { requireAuth, requireRole } from '../../../user/src/api/authMiddleware';
@@ -23,16 +25,19 @@ export interface CarrierRouterDeps {
   pool: Pool;
   jwtSecret: string;
   bus?: EventBus;
+  cache?: Cache;
 }
 
-export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps): Router {
+export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRouterDeps): Router {
   const router = Router();
   const repo = new CarrierRepository(pool);
   const complianceRepo = new ComplianceRepository(pool);
   const audit = new AuditRepository(pool);
 
-  router.get('/api/v1/shipments', requireAuth(jwtSecret), async (_req, res) => {
-    const items = await repo.listShipments();
+  router.get('/api/v1/shipments', requireAuth(jwtSecret), async (req, res) => {
+    const limit = Number(req.query['limit'] ?? 50);
+    const offset = Number(req.query['offset'] ?? 0);
+    const items = await repo.listShipments(limit, offset);
     res.status(200).json({ items });
   });
 
@@ -60,7 +65,9 @@ export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps):
 
   router.get('/api/v1/carriers', requireAuth(jwtSecret), async (req, res) => {
     const activeOnly = req.query['active'] !== 'false';
-    const items = await repo.listCarriers(activeOnly);
+    const limit = Number(req.query['limit'] ?? 100);
+    const offset = Number(req.query['offset'] ?? 0);
+    const items = await repo.listCarriers(activeOnly, limit, offset);
     res.status(200).json({ items });
   });
 
@@ -461,29 +468,35 @@ export function buildCarrierRouter({ pool, jwtSecret, bus }: CarrierRouterDeps):
   );
 
   router.get('/api/v1/dashboard/overview', requireAuth(jwtSecret), async (_req, res) => {
-    const complianceRepo = new (
-      await import('../../../compliance/src/repo/complianceRepository')
-    ).ComplianceRepository(pool);
-    const [shipmentCounts, activeCarriers, summary, auditSince] = await Promise.all([
-      repo.countShipmentsByStatus(),
-      repo.countActiveCarriers(),
-      complianceRepo.getSummary(30),
-      audit.countSince(new Date(Date.now() - 24 * 3600_000).toISOString()),
-    ]);
-    res.status(200).json({
-      shipments: {
-        byStatus: shipmentCounts,
-        quoting: shipmentCounts['quoting'] ?? 0,
-        total: Object.values(shipmentCounts).reduce((a, b) => a + b, 0),
-      },
-      carriers: { active: activeCarriers },
-      compliance: {
-        riskBuckets: summary.riskBuckets,
-        artifactsExpiringWithin30d: summary.artifactsExpiring.total,
-        artifactsExpired: summary.artifactsExpiring.expired,
-      },
-      auditEventsLast24h: auditSince,
-    });
+    const loader = async (): Promise<Record<string, unknown>> => {
+      const complianceRepo2 = new (
+        await import('../../../compliance/src/repo/complianceRepository')
+      ).ComplianceRepository(pool);
+      const [shipmentCounts, activeCarriers, summary, auditSince] = await Promise.all([
+        repo.countShipmentsByStatus(),
+        repo.countActiveCarriers(),
+        complianceRepo2.getSummary(30),
+        audit.countSince(new Date(Date.now() - 24 * 3600_000).toISOString()),
+      ]);
+      return {
+        shipments: {
+          byStatus: shipmentCounts,
+          quoting: shipmentCounts['quoting'] ?? 0,
+          total: Object.values(shipmentCounts).reduce((a, b) => a + b, 0),
+        },
+        carriers: { active: activeCarriers },
+        compliance: {
+          riskBuckets: summary.riskBuckets,
+          artifactsExpiringWithin30d: summary.artifactsExpiring.total,
+          artifactsExpired: summary.artifactsExpiring.expired,
+        },
+        auditEventsLast24h: auditSince,
+      };
+    };
+    const data = cache
+      ? await wrap(cache, 'dashboard:overview', 30, loader)
+      : await loader();
+    res.status(200).json(data);
   });
 
   router.get(

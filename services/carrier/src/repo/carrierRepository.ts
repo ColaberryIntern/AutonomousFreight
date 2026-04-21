@@ -43,7 +43,8 @@ export class CarrierRepository {
     };
   }
 
-  async listShipments(limit = 50): Promise<ShipmentRecord[]> {
+  async listShipments(limit = 50, offset = 0): Promise<ShipmentRecord[]> {
+    const clamped = Math.min(Math.max(limit, 1), 200);
     const r = await this.pool.query<{
       id: string;
       origin: string;
@@ -52,8 +53,8 @@ export class CarrierRepository {
       status: ShipmentRecord['status'];
     }>(
       `SELECT id, origin, destination, distance_miles, status
-       FROM shipments ORDER BY id LIMIT $1`,
-      [limit],
+       FROM shipments ORDER BY id LIMIT $1 OFFSET $2`,
+      [clamped, Math.max(offset, 0)],
     );
     return r.rows.map((row) => ({
       id: row.id,
@@ -67,7 +68,9 @@ export class CarrierRepository {
   async listCarriers(
     activeOnly = true,
     limit = 100,
+    offset = 0,
   ): Promise<Array<{ id: string; name: string; rating: number; active: boolean }>> {
+    const clamped = Math.min(Math.max(limit, 1), 200);
     const r = await this.pool.query<{
       id: string;
       name: string;
@@ -76,8 +79,8 @@ export class CarrierRepository {
     }>(
       `SELECT id, name, rating, active FROM carriers
        ${activeOnly ? 'WHERE active = TRUE' : ''}
-       ORDER BY name LIMIT $1`,
-      [limit],
+       ORDER BY name LIMIT $1 OFFSET $2`,
+      [clamped, Math.max(offset, 0)],
     );
     return r.rows.map((row) => ({
       id: row.id,

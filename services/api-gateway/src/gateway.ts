@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import { buildCarrierRouter } from '../../carrier/src/api/router';
 import { buildComplianceRouter } from '../../compliance/src/api/router';
 import type { EventBus } from '../../events/src/types';
+import { InMemoryCache } from '../../platform/src/cache/inMemoryCache';
 import { buildInvoiceRouter } from '../../carrier/src/api/invoiceRouter';
 import { buildRfqRouter } from '../../rfq/src/api/router';
 import { buildServer as buildUserService } from '../../user/src/api/server';
@@ -57,6 +58,7 @@ export function buildGateway(cfg: GatewayConfig): BuiltGateway {
   const app = express();
   const logger = buildLogger({ level: cfg.logLevel });
   const metrics = buildMetrics();
+  const cache = new InMemoryCache();
 
   app.disable('x-powered-by');
 
@@ -106,8 +108,8 @@ export function buildGateway(cfg: GatewayConfig): BuiltGateway {
   app.use(
     buildCarrierRouter(
       cfg.bus
-        ? { pool: cfg.pool, jwtSecret: cfg.jwtSecret, bus: cfg.bus }
-        : { pool: cfg.pool, jwtSecret: cfg.jwtSecret },
+        ? { pool: cfg.pool, jwtSecret: cfg.jwtSecret, bus: cfg.bus, cache }
+        : { pool: cfg.pool, jwtSecret: cfg.jwtSecret, cache },
     ),
   );
   app.use(buildComplianceRouter({ pool: cfg.pool, jwtSecret: cfg.jwtSecret }));
