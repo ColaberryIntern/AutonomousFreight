@@ -218,6 +218,15 @@ export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRoute
       directive: '230',
       auditPrefix: 'agent.dispute.',
     },
+    {
+      name: 'health_monitor_agent',
+      label: 'Health Monitor',
+      department: 'operations',
+      type: 'monitoring',
+      schedule: 'Every 5s — KPI threshold checks (5m cooldown)',
+      directive: '190',
+      auditPrefix: 'agent.health_monitor.',
+    },
   ] as const;
 
   router.get('/api/v1/agents', requireAuth(jwtSecret), async (_req, res) => {
