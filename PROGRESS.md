@@ -95,6 +95,11 @@ This file is read by Claude at the start of every session to maintain context co
 - [x] Registered in AGENT_REGISTRY (visible in war room)
 - [x] 5 unit tests
 
+### Data Management
+- [x] DataManagementPage component — RFQ pipeline status, shipment data volumes, data quality, recent data events
+- [x] Added to CONTROL TOWER nav group (admin/broker access)
+- [x] Lazy-loaded via React.lazy, hash-routed at #/data
+
 ---
 
 ## Current State
@@ -103,7 +108,7 @@ This file is read by Claude at the start of every session to maintain context co
 - **API Routes**: 35+
 - **Tests**: 209 unit tests passing (39 suites)
 - **Migrations**: 11 (001-011)
-- **Frontend**: 13 React components, lazy-loaded, hash-routed
+- **Frontend**: 14 React components, lazy-loaded, hash-routed
 - **Deploy**: Docker Compose on Hetzner VPS (port 8889)
 
 ---

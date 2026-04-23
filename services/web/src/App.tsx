@@ -18,6 +18,7 @@ const ErrorsPage = React.lazy(() => import('./components/ErrorsPage').then(m => 
 const AuditPage = React.lazy(() => import('./components/AuditPage').then(m => ({ default: m.AuditPage })));
 const AdminPage = React.lazy(() => import('./components/AdminPage').then(m => ({ default: m.AdminPage })));
 const AutonomyConsole = React.lazy(() => import('./components/AutonomyConsole').then(m => ({ default: m.AutonomyConsole })));
+const DataManagementPage = React.lazy(() => import('./components/DataManagementPage').then(m => ({ default: m.DataManagementPage })));
 
 type View =
   | 'ops'
@@ -26,6 +27,7 @@ type View =
   | 'shipments'
   | 'carriers'
   | 'agents'
+  | 'data'
   | 'compliance'
   | 'errors'
   | 'deployment'
@@ -62,6 +64,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: 'CONTROL TOWER',
     items: [
       { id: 'agents', label: 'Agents' },
+      { id: 'data', label: 'Data', requiresRole: ['admin', 'broker'] },
       { id: 'compliance', label: 'Compliance', requiresRole: ['admin', 'auditor'] },
       { id: 'errors', label: 'Exceptions', requiresRole: ['admin'] },
     ],
@@ -136,7 +139,7 @@ function clearSession(): void {
 }
 
 const ALL_VIEWS: View[] = [
-  'ops', 'quotes', 'queue', 'shipments', 'carriers', 'agents',
+  'ops', 'quotes', 'queue', 'shipments', 'carriers', 'agents', 'data',
   'compliance', 'errors', 'deployment', 'security', 'audit', 'admin', 'autonomy',
 ];
 
@@ -300,6 +303,7 @@ export function App(): React.ReactElement {
             {view === 'shipments' && <Shipments token={token} canApprove={canApprove} />}
             {view === 'carriers' && <Carriers token={token} canSeeCompliance={canSeeCompliance} />}
             {view === 'agents' && <AgentsPage token={token} />}
+            {view === 'data' && <DataManagementPage token={token} />}
             {view === 'compliance' && <CompliancePage token={token} />}
             {view === 'errors' && <ErrorsPage token={token} />}
             {view === 'deployment' && <DeploymentPage token={token} />}
