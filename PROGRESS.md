@@ -94,6 +94,9 @@ This file is read by Claude at the start of every session to maintain context co
 - [x] 5-minute cooldown per alert type
 - [x] Registered in AGENT_REGISTRY (visible in war room)
 - [x] 5 unit tests
+- [x] GET /api/v1/agents/health endpoint — read-only KPI snapshot + recent alerts
+- [x] AgentsPage System Health card — 3 KPI tiles + recent alerts strip (30s poll)
+- [x] 2 additional unit tests for computeHealthSnapshot (read-only, no audit writes)
 
 ### Financial Auditing & Reconciliation
 - [x] FinancialsPage component — revenue KPIs, reconciliation, invoice status, disputes, financial events
@@ -110,8 +113,8 @@ This file is read by Claude at the start of every session to maintain context co
 ## Current State
 
 - **Agents**: 10 (Quoting, Procurement, Tracking, Document, Rate Audit, Invoice, Payment Match, Settlement, Dispute, Health Monitor)
-- **API Routes**: 35+
-- **Tests**: 209 unit tests passing (39 suites)
+- **API Routes**: 36+
+- **Tests**: 211 unit tests passing (39 suites)
 - **Migrations**: 11 (001-011)
 - **Frontend**: 15 React components, lazy-loaded, hash-routed
 - **Deploy**: Docker Compose on Hetzner VPS (port 8889)

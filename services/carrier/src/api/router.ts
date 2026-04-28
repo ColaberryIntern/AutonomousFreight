@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Pool } from 'pg';
 import { z } from 'zod';
+import { computeHealthSnapshot } from '../agent/healthMonitorAgent';
 import { evaluateAssignmentGates } from '../../../compliance/src/domain/gates';
 import { computeRiskScore, type ComplianceSnapshot } from '../../../compliance/src/domain/riskScore';
 import type { Cache } from '../../../platform/src/cache/cache';
@@ -288,6 +289,29 @@ export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRoute
           row.action.includes('blocked')
             ? 'failed'
             : 'success',
+      })),
+    });
+  });
+
+  router.get('/api/v1/agents/health', requireAuth(jwtSecret), async (_req, res) => {
+    const snapshot = await computeHealthSnapshot(pool);
+    const r = await pool.query<{
+      id: string;
+      action: string;
+      metadata: Record<string, unknown>;
+      occurred_at: Date;
+    }>(
+      `SELECT id::text, action, metadata, occurred_at
+       FROM audit_log WHERE action = 'agent.health_monitor.alert'
+       ORDER BY id DESC LIMIT 5`,
+    );
+    res.status(200).json({
+      ...snapshot,
+      recentAlerts: r.rows.map((row) => ({
+        id: row.id,
+        action: row.action,
+        metadata: row.metadata,
+        occurredAt: row.occurred_at.toISOString(),
       })),
     });
   });

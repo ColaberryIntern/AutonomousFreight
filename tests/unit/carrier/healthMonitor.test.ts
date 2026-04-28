@@ -3,6 +3,7 @@ import {
   runHealthMonitorTick,
   resetCooldownForTest,
   DEFAULT_THRESHOLDS,
+  computeHealthSnapshot,
 } from '../../../services/carrier/src/agent/healthMonitorAgent';
 
 function mockDeps(counts: Record<string, number>) {
@@ -83,5 +84,35 @@ describe('healthMonitorAgent', () => {
       loginFailuresPerHour: 2,
     });
     expect(result.alerts).toBe(1);
+  });
+});
+
+describe('computeHealthSnapshot', () => {
+  it('reports ok status when all metrics below threshold', async () => {
+    const deps = mockDeps({
+      'auth.login.failure': 2,
+      agent_exceptions: 1,
+      'gate.hard_blocked': 0,
+    });
+    const snap = await computeHealthSnapshot(deps.pool);
+    expect(snap.checks).toHaveLength(3);
+    expect(snap.checks.every((c) => c.status === 'ok')).toBe(true);
+    expect(snap.checks.find((c) => c.metric === 'login_failures')?.count).toBe(2);
+    // Read-only — must not record audit entries
+    expect(deps.recorded).toHaveLength(0);
+  });
+
+  it('reports alert status when threshold breached, without recording', async () => {
+    const deps = mockDeps({
+      'auth.login.failure': 50,
+      agent_exceptions: 0,
+      'gate.hard_blocked': 0,
+    });
+    const snap = await computeHealthSnapshot(deps.pool);
+    const lf = snap.checks.find((c) => c.metric === 'login_failures');
+    expect(lf?.status).toBe('alert');
+    expect(lf?.count).toBe(50);
+    expect(snap.checks.find((c) => c.metric === 'agent_exceptions')?.status).toBe('ok');
+    expect(deps.recorded).toHaveLength(0);
   });
 });

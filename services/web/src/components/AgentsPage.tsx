@@ -44,6 +44,28 @@ interface Pulse {
   startedAt: number;
 }
 
+interface HealthCheck {
+  metric: string;
+  label: string;
+  count: number;
+  threshold: number;
+  status: 'ok' | 'alert';
+  windowHours: number;
+}
+
+interface HealthAlert {
+  id: string;
+  action: string;
+  metadata: Record<string, unknown>;
+  occurredAt: string;
+}
+
+interface HealthSnapshot {
+  checks: HealthCheck[];
+  recentAlerts: HealthAlert[];
+  generatedAt: string;
+}
+
 const DEPT_COLORS: Record<string, { bg: string; label: string }> = {
   quoting: { bg: '#3B82F6', label: 'Quoting' },
   procurement: { bg: '#10B981', label: 'Procurement' },
@@ -141,6 +163,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
   const [replayIdx, setReplayIdx] = useState(0);
   const seenIds = useRef(new Set<string>());
   const [glowing, setGlowing] = useState<Set<string>>(new Set());
+  const [health, setHealth] = useState<HealthSnapshot | null>(null);
 
   // Load agents
   useEffect(() => {
@@ -152,6 +175,24 @@ export function AgentsPage({ token }: Props): React.ReactElement {
         setPositions({ ...hp });
       })
       .catch((e) => setErr(String(e)));
+  }, [token]);
+
+  // Load health snapshot from Health Monitor agent (poll every 30s)
+  useEffect(() => {
+    let cancelled = false;
+    function load(): void {
+      api<HealthSnapshot>('/api/v1/agents/health', token)
+        .then((r) => {
+          if (!cancelled) setHealth(r);
+        })
+        .catch(() => {});
+    }
+    load();
+    const iv = setInterval(load, 30_000);
+    return (): void => {
+      cancelled = true;
+      clearInterval(iv);
+    };
   }, [token]);
 
   // Load 24h activity for replay
@@ -485,6 +526,74 @@ export function AgentsPage({ token }: Props): React.ReactElement {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* System health — from Health Monitor agent */}
+      {health && (
+        <div style={styles.card}>
+          <h3 style={styles.h3}>
+            System health
+            <span
+              style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: colors.textMuted }}
+            >
+              1-hour window · refreshes every 30s
+            </span>
+          </h3>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {health.checks.map((c) => {
+              const color = c.status === 'alert' ? colors.danger : colors.success;
+              return (
+                <div key={c.metric} style={{ ...styles.stat, borderTop: `3px solid ${color}` }}>
+                  <div style={styles.statLabel}>{c.label}</div>
+                  <div style={{ ...styles.statValue, color }}>{c.count}</div>
+                  <div style={styles.statHint}>
+                    threshold {c.threshold} · {c.status === 'alert' ? 'BREACH' : 'normal'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {health.recentAlerts.length > 0 && (
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${colors.cardBorder}` }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: colors.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.4,
+                  marginBottom: 6,
+                }}
+              >
+                Recent alerts
+              </div>
+              {health.recentAlerts.map((a) => (
+                <div
+                  key={a.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '4px 0',
+                    fontSize: 12,
+                  }}
+                >
+                  <span style={pill(colors.danger)}>alert</span>
+                  <span style={{ fontWeight: 600 }}>
+                    {String(a.metadata?.['metric'] ?? 'unknown')}
+                  </span>
+                  <span style={{ color: colors.textDim }}>
+                    {String(a.metadata?.['count'] ?? '?')} ≥ threshold{' '}
+                    {String(a.metadata?.['threshold'] ?? '?')}
+                  </span>
+                  <span style={{ marginLeft: 'auto', color: colors.textMuted, fontSize: 11 }}>
+                    {relativeTime(a.occurredAt)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

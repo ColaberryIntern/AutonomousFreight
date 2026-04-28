@@ -97,3 +97,77 @@ export async function runHealthMonitorTick(
 export function resetCooldownForTest(): void {
   lastAlertAt.clear();
 }
+
+export interface HealthCheck {
+  metric: string;
+  label: string;
+  count: number;
+  threshold: number;
+  status: 'ok' | 'alert';
+  windowHours: number;
+}
+
+export interface HealthSnapshot {
+  checks: HealthCheck[];
+  generatedAt: string;
+}
+
+const SNAPSHOT_DEFINITIONS: Array<{
+  metric: keyof HealthThresholds;
+  key: string;
+  label: string;
+  action: string;
+}> = [
+  {
+    metric: 'loginFailuresPerHour',
+    key: 'login_failures',
+    label: 'Login failures',
+    action: 'auth.login.failure',
+  },
+  {
+    metric: 'agentExceptionsPerHour',
+    key: 'agent_exceptions',
+    label: 'Agent exceptions',
+    action: 'agent.%.exception',
+  },
+  {
+    metric: 'gateBlocksPerHour',
+    key: 'gate_blocks',
+    label: 'Gate hard blocks',
+    action: 'gate.hard_blocked',
+  },
+];
+
+/**
+ * Read-only snapshot of the same KPIs the Health Monitor agent checks.
+ * Used by GET /api/v1/agents/health to surface current status without
+ * recording alerts or honoring cooldown.
+ */
+export async function computeHealthSnapshot(
+  pool: Pool,
+  thresholds: HealthThresholds = DEFAULT_THRESHOLDS,
+): Promise<HealthSnapshot> {
+  const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();
+  const checks: HealthCheck[] = [];
+
+  for (const def of SNAPSHOT_DEFINITIONS) {
+    const isLike = def.action.includes('%');
+    const r = await pool.query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM audit_log
+       WHERE ${isLike ? 'action LIKE $1' : 'action = $1'} AND occurred_at >= $2`,
+      [def.action, oneHourAgo],
+    );
+    const count = Number(r.rows[0]?.c ?? 0);
+    const threshold = thresholds[def.metric];
+    checks.push({
+      metric: def.key,
+      label: def.label,
+      count,
+      threshold,
+      status: count >= threshold ? 'alert' : 'ok',
+      windowHours: 1,
+    });
+  }
+
+  return { checks, generatedAt: new Date().toISOString() };
+}
