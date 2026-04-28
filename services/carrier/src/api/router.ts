@@ -11,8 +11,18 @@ import { ComplianceRepository } from '../../../compliance/src/repo/complianceRep
 import type { EventBus } from '../../../events/src/types';
 import { requireAuth, requireRole } from '../../../user/src/api/authMiddleware';
 import { AuditRepository } from '../../../user/src/repo/auditRepository';
+import {
+  AUTONOMY_OPERATIONS,
+  AUTONOMY_OUTCOMES,
+  evaluateGraduation,
+  isAutonomyOperation,
+  LEVEL_DEFINITIONS,
+  summarizeSamples,
+  type AutonomyOperation,
+} from '../domain/autonomy';
 import { computeReconciliation } from '../domain/reconciliation';
 import { rankCarriers, WEIGHTS } from '../domain/scoring';
+import { AutonomyRepository } from '../repo/autonomyRepository';
 import { CarrierRepository } from '../repo/carrierRepository';
 import { selectCarrierController } from './selectCarrierController';
 
@@ -35,6 +45,7 @@ export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRoute
   const repo = new CarrierRepository(pool);
   const complianceRepo = new ComplianceRepository(pool);
   const audit = new AuditRepository(pool);
+  const autonomyRepo = new AutonomyRepository(pool);
 
   router.get('/api/v1/shipments', requireAuth(jwtSecret), async (req, res) => {
     const limit = Number(req.query['limit'] ?? 50);
@@ -316,6 +327,218 @@ export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRoute
       })),
     });
   });
+
+  // ---------- Autonomy Console ----------
+
+  const SetAutonomyLevelBody = z.object({
+    level: z.number().int().min(1).max(4),
+    notes: z.string().max(1000).optional(),
+  });
+
+  const SampleBody = z.object({
+    operation: z.enum(AUTONOMY_OPERATIONS),
+    targetId: z.string().regex(UUID_RE).optional(),
+    confidence: z.number().min(0).max(1),
+    outcome: z.enum(AUTONOMY_OUTCOMES),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  });
+
+  router.get('/api/v1/autonomy/levels', requireAuth(jwtSecret), async (req, res) => {
+    const requestId = req.requestId ?? '-';
+    const startedAt = Date.now();
+    try {
+      const rows = await withRetry(() => autonomyRepo.listLevels(), {
+        attempts: 2,
+        baseDelayMs: 100,
+        onAttemptFailed: (n, err) => {
+          console.warn('[autonomy.levels] retry', { requestId, attempt: n, err: String(err) });
+        },
+      });
+      const operations = rows.map((row) => ({
+        operation: row.operation,
+        level: row.level,
+        notes: row.notes,
+        updatedAt: row.updatedAt,
+        updatedBy: row.updatedByUserId,
+        levelMeta: LEVEL_DEFINITIONS[row.level - 1] ?? null,
+      }));
+      console.warn('[autonomy.levels] ok', {
+        requestId,
+        durationMs: Date.now() - startedAt,
+        count: operations.length,
+      });
+      res.status(200).json({ operations, definitions: LEVEL_DEFINITIONS });
+    } catch (err) {
+      console.error('[autonomy.levels] failed', { requestId, err: String(err) });
+      res.status(503).json({
+        error: 'autonomy_unavailable',
+        message: 'Autonomy state temporarily unavailable. Please try again.',
+        requestId,
+      });
+    }
+  });
+
+  router.put(
+    '/api/v1/autonomy/levels/:operation',
+    requireAuth(jwtSecret),
+    requireRole('admin'),
+    async (req, res) => {
+      const requestId = req.requestId ?? '-';
+      const operation = req.params['operation'];
+      if (!isAutonomyOperation(operation)) {
+        res.status(400).json({ error: 'invalid_operation' });
+        return;
+      }
+      const parsed = SetAutonomyLevelBody.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'invalid_input', details: parsed.error.issues });
+        return;
+      }
+      const before = await autonomyRepo.getLevel(operation);
+      try {
+        const after = await autonomyRepo.setLevel({
+          operation,
+          level: parsed.data.level as 1 | 2 | 3 | 4,
+          ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),
+          ...(req.user?.userId ? { userId: req.user.userId } : {}),
+        });
+        const auditEntry: Parameters<typeof audit.record>[0] = {
+          action: 'autonomy.level_changed',
+          target: operation,
+          metadata: {
+            operation,
+            previousLevel: before?.level ?? null,
+            newLevel: after.level,
+            notes: parsed.data.notes ?? null,
+          },
+        };
+        if (req.user?.userId) auditEntry.actorUserId = req.user.userId;
+        void audit.record(auditEntry);
+        console.warn('[autonomy.set_level] ok', {
+          requestId,
+          operation,
+          previousLevel: before?.level ?? null,
+          newLevel: after.level,
+        });
+        res.status(200).json({
+          operation: after.operation,
+          level: after.level,
+          notes: after.notes,
+          updatedAt: after.updatedAt,
+          updatedBy: after.updatedByUserId,
+        });
+      } catch (err) {
+        console.error('[autonomy.set_level] failed', { requestId, operation, err: String(err) });
+        res.status(503).json({
+          error: 'autonomy_unavailable',
+          message: 'Could not update autonomy level. Please try again.',
+          requestId,
+        });
+      }
+    },
+  );
+
+  router.post('/api/v1/autonomy/samples', requireAuth(jwtSecret), async (req, res) => {
+    const requestId = req.requestId ?? '-';
+    const parsed = SampleBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'invalid_input', details: parsed.error.issues });
+      return;
+    }
+    try {
+      const out = await withRetry(
+        () =>
+          autonomyRepo.appendSample({
+            operation: parsed.data.operation,
+            confidence: parsed.data.confidence,
+            outcome: parsed.data.outcome,
+            ...(parsed.data.targetId !== undefined ? { targetId: parsed.data.targetId } : {}),
+            ...(parsed.data.metadata !== undefined ? { metadata: parsed.data.metadata } : {}),
+          }),
+        {
+          attempts: 2,
+          baseDelayMs: 100,
+          onAttemptFailed: (n, err) => {
+            console.warn('[autonomy.sample] retry', { requestId, attempt: n, err: String(err) });
+          },
+        },
+      );
+      console.warn('[autonomy.sample] ok', {
+        requestId,
+        operation: parsed.data.operation,
+        outcome: parsed.data.outcome,
+      });
+      res.status(201).json({ id: out.id });
+    } catch (err) {
+      console.error('[autonomy.sample] failed', { requestId, err: String(err) });
+      res.status(503).json({
+        error: 'autonomy_unavailable',
+        message: 'Could not record sample. Please retry.',
+        requestId,
+      });
+    }
+  });
+
+  router.get(
+    '/api/v1/autonomy/graduation/:operation',
+    requireAuth(jwtSecret),
+    async (req, res) => {
+      const requestId = req.requestId ?? '-';
+      const operation = req.params['operation'];
+      if (!isAutonomyOperation(operation)) {
+        res.status(400).json({ error: 'invalid_operation' });
+        return;
+      }
+      const op: AutonomyOperation = operation;
+      try {
+        const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600_000).toISOString();
+        const [levelRow, samples] = await Promise.all([
+          autonomyRepo.getLevel(op),
+          autonomyRepo.getSamplesSince(op, ninetyDaysAgo),
+        ]);
+        if (!levelRow) {
+          res.status(404).json({ error: 'autonomy_level_not_found' });
+          return;
+        }
+        const stats = summarizeSamples(samples);
+        const daysAtLevel = Math.max(
+          0,
+          Math.floor((Date.now() - Date.parse(levelRow.updatedAt)) / (24 * 3600_000)),
+        );
+        const evaluation = evaluateGraduation({
+          currentLevel: levelRow.level,
+          daysAtLevel,
+          stats,
+        });
+        console.warn('[autonomy.graduation] ok', {
+          requestId,
+          operation: op,
+          level: levelRow.level,
+          eligible: evaluation.eligible,
+        });
+        res.status(200).json({
+          operation: op,
+          level: levelRow.level,
+          daysAtLevel,
+          windowDays: 90,
+          stats,
+          evaluation,
+          levelMeta: LEVEL_DEFINITIONS[levelRow.level - 1] ?? null,
+        });
+      } catch (err) {
+        console.error('[autonomy.graduation] failed', {
+          requestId,
+          operation: op,
+          err: String(err),
+        });
+        res.status(503).json({
+          error: 'autonomy_unavailable',
+          message: 'Could not evaluate graduation. Please retry.',
+          requestId,
+        });
+      }
+    },
+  );
 
   router.get('/api/v1/scoring/weights', requireAuth(jwtSecret), (_req, res) => {
     res.status(200).json({

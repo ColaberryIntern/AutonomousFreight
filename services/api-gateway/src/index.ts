@@ -68,6 +68,11 @@ async function main(): Promise<void> {
     'utf8',
   );
   await pool.query(perfIndexSql);
+  const autonomySql = readFileSync(
+    join(__dirname, '../../carrier/src/repo/migrations/012_autonomy.sql'),
+    'utf8',
+  );
+  await pool.query(autonomySql);
 
   const bus: EventBus = new InMemoryEventBus();
   const driver = buildEmailDriver(process.env);

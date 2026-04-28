@@ -118,14 +118,26 @@ This file is read by Claude at the start of every session to maintain context co
 - [x] OpsHome friendly error card distinguishes auth/server/network + Retry button
 - [x] 11 new unit tests (5 withRetry + 6 auditLogsQuery)
 
+### Autonomy Console — backend persistence
+- [x] Migration 012 — autonomy_levels (PK by operation, level 1..4) + autonomy_confidence_samples (append-only learning loop)
+- [x] Seeded 3 operations (quoting, dispatch, invoicing) at L1 (HITL)
+- [x] Domain logic (services/carrier/src/domain/autonomy.ts) — deterministic graduation rules transcribed from V5 §6
+- [x] AutonomyRepository with transactional setLevel (UPSERT inside BEGIN/COMMIT)
+- [x] GET /api/v1/autonomy/levels — list current levels + level definitions
+- [x] PUT /api/v1/autonomy/levels/:operation (admin) — zod validated, audit-recorded
+- [x] POST /api/v1/autonomy/samples — append confidence samples (withRetry-wrapped)
+- [x] GET /api/v1/autonomy/graduation/:operation — eligibility + blockers from 90-day window
+- [x] All routes structured-logged + 503 fallback on DB failure
+- [x] 10 new unit tests (summarizeSamples, evaluateGraduation across all level transitions)
+
 ---
 
 ## Current State
 
 - **Agents**: 10 (Quoting, Procurement, Tracking, Document, Rate Audit, Invoice, Payment Match, Settlement, Dispute, Health Monitor)
-- **API Routes**: 36+
-- **Tests**: 222 unit tests passing (41 suites)
-- **Migrations**: 11 (001-011)
+- **API Routes**: 40+
+- **Tests**: 232 unit tests passing (42 suites)
+- **Migrations**: 12 (001-012)
 - **Frontend**: 15 React components, lazy-loaded, hash-routed
 - **Deploy**: Docker Compose on Hetzner VPS (port 8889)
 
@@ -136,7 +148,7 @@ This file is read by Claude at the start of every session to maintain context co
 - [ ] Deploy latest changes to VPS (4 commits since last deploy)
 - [ ] Gmail OAuth email integration testing
 - [ ] Surety bond lifecycle management (V-2+ deferred)
-- [ ] Autonomy graduation state persistence (V-2+ deferred)
+- [x] Autonomy graduation state persistence — completed (migration 012 + 4 routes)
 - [ ] Role mutation from admin UI (V-2+ deferred)
 - [ ] Financial dashboards — margin, profitability, lane performance (V-3+ deferred)
 - [ ] Real-time updates via SSE/WebSocket (V-2+ deferred)
