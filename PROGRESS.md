@@ -130,13 +130,24 @@ This file is read by Claude at the start of every session to maintain context co
 - [x] All routes structured-logged + 503 fallback on DB failure
 - [x] 10 new unit tests (summarizeSamples, evaluateGraduation across all level transitions)
 
+### Admin Dashboard — backend
+- [x] computeAdminSummary domain helper — user counts by role, MFA adoption %, registrations last 7d, admin-action volume + top actions (24h)
+- [x] UserRepository.searchUsers — optional email ILIKE + role filter (additive; listUsers no-args path preserved)
+- [x] UserRepository.findUserDetail — single-user view + lastLoginAt + lastActionAt + recentAuditCount (7d)
+- [x] GET /api/v1/admin/users now accepts ?search=, ?role=, ?limit=, ?offset= (zod-validated; backwards-compatible)
+- [x] GET /api/v1/admin/users/:id — single-user detail (admin only)
+- [x] GET /api/v1/admin/summary — population health + admin audit roll-up (admin only, withRetry-wrapped)
+- [x] All routes structured-logged + 503 fallback consistent with dashboard hardening
+- [x] 5 new unit tests for computeAdminSummary
+- Note: role mutation remains deferred per CLAUDE.md governance boundary
+
 ---
 
 ## Current State
 
 - **Agents**: 10 (Quoting, Procurement, Tracking, Document, Rate Audit, Invoice, Payment Match, Settlement, Dispute, Health Monitor)
-- **API Routes**: 40+
-- **Tests**: 232 unit tests passing (42 suites)
+- **API Routes**: 42+
+- **Tests**: 237 unit tests passing (43 suites)
 - **Migrations**: 12 (001-012)
 - **Frontend**: 15 React components, lazy-loaded, hash-routed
 - **Deploy**: Docker Compose on Hetzner VPS (port 8889)

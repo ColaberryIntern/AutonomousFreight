@@ -143,6 +143,129 @@ export class UserRepository {
     }));
   }
 
+  async searchUsers(opts: {
+    search?: string;
+    role?: Role;
+    limit?: number;
+    offset?: number;
+  }): Promise<
+    Array<{
+      id: string;
+      email: string;
+      roles: string[];
+      mfaEnabled: boolean;
+      createdAt: string;
+    }>
+  > {
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
+    const offset = Math.max(opts.offset ?? 0, 0);
+    const where: string[] = [];
+    const params: unknown[] = [];
+    if (opts.search) {
+      params.push(`%${opts.search}%`);
+      where.push(`u.email ILIKE $${params.length}`);
+    }
+    if (opts.role) {
+      params.push(opts.role);
+      where.push(
+        `EXISTS (SELECT 1 FROM user_roles ur2 WHERE ur2.user_id = u.id AND ur2.role_name = $${params.length})`,
+      );
+    }
+    params.push(limit);
+    const limitParam = params.length;
+    params.push(offset);
+    const offsetParam = params.length;
+
+    const whereClause = where.length === 0 ? '' : `WHERE ${where.join(' AND ')}`;
+    const r = await this.pool.query<{
+      id: string;
+      email: string;
+      roles: string[];
+      mfa_enabled: boolean;
+      created_at: Date;
+    }>(
+      `SELECT u.id, u.email, u.mfa_enabled, u.created_at,
+              COALESCE(ARRAY_AGG(ur.role_name) FILTER (WHERE ur.role_name IS NOT NULL), '{}') AS roles
+       FROM users u
+       LEFT JOIN user_roles ur ON ur.user_id = u.id
+       ${whereClause}
+       GROUP BY u.id
+       ORDER BY u.created_at DESC
+       LIMIT $${limitParam} OFFSET $${offsetParam}`,
+      params,
+    );
+    return r.rows.map((row) => ({
+      id: row.id,
+      email: row.email,
+      roles: row.roles,
+      mfaEnabled: row.mfa_enabled,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async findUserDetail(userId: string): Promise<{
+    id: string;
+    email: string;
+    roles: string[];
+    mfaEnabled: boolean;
+    createdAt: string;
+    updatedAt: string;
+    lastLoginAt: string | null;
+    lastActionAt: string | null;
+    recentAuditCount: number;
+  } | null> {
+    const userRow = await this.pool.query<{
+      id: string;
+      email: string;
+      roles: string[];
+      mfa_enabled: boolean;
+      created_at: Date;
+      updated_at: Date;
+    }>(
+      `SELECT u.id, u.email, u.mfa_enabled, u.created_at, u.updated_at,
+              COALESCE(ARRAY_AGG(ur.role_name) FILTER (WHERE ur.role_name IS NOT NULL), '{}') AS roles
+       FROM users u
+       LEFT JOIN user_roles ur ON ur.user_id = u.id
+       WHERE u.id = $1
+       GROUP BY u.id`,
+      [userId],
+    );
+    const row = userRow.rows[0];
+    if (!row) return null;
+
+    const [loginRow, actionRow, countRow] = await Promise.all([
+      this.pool.query<{ occurred_at: Date }>(
+        `SELECT occurred_at FROM audit_log
+         WHERE actor_user_id = $1 AND action = 'auth.login.success'
+         ORDER BY occurred_at DESC LIMIT 1`,
+        [userId],
+      ),
+      this.pool.query<{ occurred_at: Date }>(
+        `SELECT occurred_at FROM audit_log
+         WHERE actor_user_id = $1
+         ORDER BY occurred_at DESC LIMIT 1`,
+        [userId],
+      ),
+      this.pool.query<{ c: string }>(
+        `SELECT COUNT(*)::text AS c FROM audit_log
+         WHERE actor_user_id = $1 AND occurred_at >= $2`,
+        [userId, new Date(Date.now() - 7 * 24 * 3600_000).toISOString()],
+      ),
+    ]);
+
+    return {
+      id: row.id,
+      email: row.email,
+      roles: row.roles,
+      mfaEnabled: row.mfa_enabled,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
+      lastLoginAt: loginRow.rows[0]?.occurred_at.toISOString() ?? null,
+      lastActionAt: actionRow.rows[0]?.occurred_at.toISOString() ?? null,
+      recentAuditCount: Number(countRow.rows[0]?.c ?? 0),
+    };
+  }
+
   async findByEmailWithMfa(email: string): Promise<UserRecord | null> {
     const r = await this.pool.query<{ id: string }>('SELECT id FROM users WHERE email = $1', [
       email,
