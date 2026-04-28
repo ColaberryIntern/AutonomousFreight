@@ -108,13 +108,23 @@ This file is read by Claude at the start of every session to maintain context co
 - [x] Added to CONTROL TOWER nav group (admin/broker access)
 - [x] Lazy-loaded via React.lazy, hash-routed at #/data
 
+### Operations Dashboard Reliability
+- [x] withRetry helper (services/platform/src/reliability) — exponential backoff for transient failures
+- [x] dashboard/overview wrapped in withRetry (2 attempts) + 503 fallback with requestId
+- [x] Structured outcome logging (durationMs, requestId) on dashboard handler
+- [x] parseAuditLogsQuery — clamps limit to [1, 200], validates action format
+- [x] /api/v1/audit/logs hardened: clamped query params + 503 fallback on DB failure
+- [x] ApiError class + apiWithRetry (frontend) — retries 5xx/network only, never 4xx
+- [x] OpsHome friendly error card distinguishes auth/server/network + Retry button
+- [x] 11 new unit tests (5 withRetry + 6 auditLogsQuery)
+
 ---
 
 ## Current State
 
 - **Agents**: 10 (Quoting, Procurement, Tracking, Document, Rate Audit, Invoice, Payment Match, Settlement, Dispute, Health Monitor)
 - **API Routes**: 36+
-- **Tests**: 211 unit tests passing (39 suites)
+- **Tests**: 222 unit tests passing (41 suites)
 - **Migrations**: 11 (001-011)
 - **Frontend**: 15 React components, lazy-loaded, hash-routed
 - **Deploy**: Docker Compose on Hetzner VPS (port 8889)

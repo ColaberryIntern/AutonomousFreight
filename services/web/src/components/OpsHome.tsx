@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { api } from '../api';
+import { ApiError, apiWithRetry } from '../api';
 import { colors, pill, relativeTime, statusColor, styles } from '../styles';
 import type { AuditItem, Overview } from '../types';
 
@@ -16,23 +16,78 @@ const RISK_COLORS: Record<string, string> = {
   unknown: colors.textMuted,
 };
 
+interface DashboardError {
+  kind: 'auth' | 'server' | 'network';
+  message: string;
+}
+
+function classifyError(e: unknown): DashboardError {
+  if (e instanceof ApiError) {
+    if (e.status === 401 || e.status === 403) {
+      return { kind: 'auth', message: 'Your session has expired. Please log in again.' };
+    }
+    if (e.status >= 500) {
+      return {
+        kind: 'server',
+        message: 'The dashboard is temporarily unavailable. Please retry in a moment.',
+      };
+    }
+    return { kind: 'server', message: `Request failed (${e.status}).` };
+  }
+  return {
+    kind: 'network',
+    message: 'Network error — check your connection and retry.',
+  };
+}
+
 export function OpsHome({ token, isAdmin }: Props): React.ReactElement {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [audit, setAudit] = useState<AuditItem[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [err, setErr] = useState<DashboardError | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const retry = useCallback((): void => {
+    setErr(null);
+    setOverview(null);
+    setReloadKey((k) => k + 1);
+  }, []);
 
   useEffect(() => {
-    api<Overview>('/api/v1/dashboard/overview', token)
-      .then(setOverview)
-      .catch((e) => setErr(String(e)));
+    let cancelled = false;
+    apiWithRetry<Overview>('/api/v1/dashboard/overview', token)
+      .then((r) => {
+        if (!cancelled) setOverview(r);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setErr(classifyError(e));
+      });
     if (isAdmin) {
-      api<{ items: AuditItem[] }>('/api/v1/audit/logs?limit=10', token)
-        .then((r) => setAudit(r.items))
-        .catch(() => setAudit([]));
+      apiWithRetry<{ items: AuditItem[] }>('/api/v1/audit/logs?limit=10', token)
+        .then((r) => {
+          if (!cancelled) setAudit(r.items);
+        })
+        .catch(() => {
+          if (!cancelled) setAudit([]);
+        });
     }
-  }, [token, isAdmin]);
+    return (): void => {
+      cancelled = true;
+    };
+  }, [token, isAdmin, reloadKey]);
 
-  if (err) return <p style={styles.err}>{err}</p>;
+  if (err) {
+    return (
+      <div style={{ ...styles.card, borderLeft: `4px solid ${colors.danger}`, maxWidth: 560 }}>
+        <h3 style={{ ...styles.h3, color: colors.danger }}>Dashboard unavailable</h3>
+        <p style={{ fontSize: 13, color: colors.textDim, marginTop: 4 }}>{err.message}</p>
+        {err.kind !== 'auth' && (
+          <button style={{ ...styles.btn, marginTop: 8 }} onClick={retry}>
+            Retry
+          </button>
+        )}
+      </div>
+    );
+  }
   if (!overview) return <p>Loading…</p>;
 
   const riskData = Object.entries(overview.compliance.riskBuckets).map(([k, v]) => ({

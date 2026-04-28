@@ -9,6 +9,7 @@ import { getUsage } from '../../../billing/src/domain/usage';
 import { buildConsentStatus, CURRENT_CONSENT_VERSION } from '../domain/consent';
 import { computeSecurityKpis } from '../domain/securityKpis';
 import { computeSecurityTrends } from '../domain/securityTrends';
+import { parseAuditLogsQuery } from '../domain/auditLogsQuery';
 import { AuditRepository } from '../repo/auditRepository';
 import { UserRepository } from '../repo/userRepository';
 
@@ -71,11 +72,19 @@ export function buildServer({ pool, jwtSecret, jwtTtl, bus, mfaKek }: ServerDeps
     requireAuth(jwtSecret),
     requireRole('admin'),
     async (req: Request, res: Response) => {
-      const limit = Number(req.query['limit'] ?? 50);
-      const offset = Number(req.query['offset'] ?? 0);
-      const action = typeof req.query['action'] === 'string' ? req.query['action'] : undefined;
-      const items = await audit.listPage(action ? { limit, offset, action } : { limit, offset });
-      res.status(200).json({ items });
+      const requestId = req.requestId ?? '-';
+      const opts = parseAuditLogsQuery(req.query as Record<string, unknown>);
+      try {
+        const items = await audit.listPage(opts);
+        res.status(200).json({ items });
+      } catch (err) {
+        console.error('[audit.logs] failed', { requestId, err: String(err) });
+        res.status(503).json({
+          error: 'audit_logs_unavailable',
+          message: 'Audit log temporarily unavailable. Please try again.',
+          requestId,
+        });
+      }
     },
   );
 

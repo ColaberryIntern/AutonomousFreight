@@ -6,6 +6,7 @@ import { evaluateAssignmentGates } from '../../../compliance/src/domain/gates';
 import { computeRiskScore, type ComplianceSnapshot } from '../../../compliance/src/domain/riskScore';
 import type { Cache } from '../../../platform/src/cache/cache';
 import { wrap } from '../../../platform/src/cache/cache';
+import { withRetry } from '../../../platform/src/reliability/withRetry';
 import { ComplianceRepository } from '../../../compliance/src/repo/complianceRepository';
 import type { EventBus } from '../../../events/src/types';
 import { requireAuth, requireRole } from '../../../user/src/api/authMiddleware';
@@ -500,17 +501,31 @@ export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRoute
     },
   );
 
-  router.get('/api/v1/dashboard/overview', requireAuth(jwtSecret), async (_req, res) => {
+  router.get('/api/v1/dashboard/overview', requireAuth(jwtSecret), async (req, res) => {
+    const startedAt = Date.now();
+    const requestId = req.requestId ?? '-';
     const loader = async (): Promise<Record<string, unknown>> => {
       const complianceRepo2 = new (
         await import('../../../compliance/src/repo/complianceRepository')
       ).ComplianceRepository(pool);
-      const [shipmentCounts, activeCarriers, summary, auditSince] = await Promise.all([
-        repo.countShipmentsByStatus(),
-        repo.countActiveCarriers(),
-        complianceRepo2.getSummary(30),
-        audit.countSince(new Date(Date.now() - 24 * 3600_000).toISOString()),
-      ]);
+      // Retry transient DB blips (connection resets, brief unavailability).
+      // 2 attempts, 100ms base — read-only, idempotent.
+      const [shipmentCounts, activeCarriers, summary, auditSince] = await withRetry(
+        () =>
+          Promise.all([
+            repo.countShipmentsByStatus(),
+            repo.countActiveCarriers(),
+            complianceRepo2.getSummary(30),
+            audit.countSince(new Date(Date.now() - 24 * 3600_000).toISOString()),
+          ]),
+        {
+          attempts: 2,
+          baseDelayMs: 100,
+          onAttemptFailed: (n, err) => {
+            console.warn('[dashboard.overview] retry', { requestId, attempt: n, err: String(err) });
+          },
+        },
+      );
       return {
         shipments: {
           byStatus: shipmentCounts,
@@ -526,10 +541,27 @@ export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRoute
         auditEventsLast24h: auditSince,
       };
     };
-    const data = cache
-      ? await wrap(cache, 'dashboard:overview', 30, loader)
-      : await loader();
-    res.status(200).json(data);
+    try {
+      const data = cache
+        ? await wrap(cache, 'dashboard:overview', 30, loader)
+        : await loader();
+      console.warn('[dashboard.overview] ok', {
+        requestId,
+        durationMs: Date.now() - startedAt,
+      });
+      res.status(200).json(data);
+    } catch (err) {
+      console.error('[dashboard.overview] failed', {
+        requestId,
+        durationMs: Date.now() - startedAt,
+        err: String(err),
+      });
+      res.status(503).json({
+        error: 'dashboard_unavailable',
+        message: 'Dashboard temporarily unavailable. Please try again.',
+        requestId,
+      });
+    }
   });
 
   router.get(
