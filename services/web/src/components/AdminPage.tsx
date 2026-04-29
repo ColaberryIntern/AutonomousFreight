@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { api, apiWithRetry } from '../api';
 import { colors, pill, relativeTime, styles } from '../styles';
 import type { AdminUser } from '../types';
@@ -26,7 +26,12 @@ export function AdminPage({ token }: Props): React.ReactElement {
   const [items, setItems] = useState<AdminUser[] | null>(null);
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [healthOk, setHealthOk] = useState<boolean | null>(null);
+  const [healthCheckedAt, setHealthCheckedAt] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  const goto = useCallback((path: string): void => {
+    window.location.hash = path;
+  }, []);
 
   useEffect(() => {
     api<{ items: AdminUser[] }>('/api/v1/admin/users', token)
@@ -57,17 +62,23 @@ export function AdminPage({ token }: Props): React.ReactElement {
     let cancelled = false;
     api<{ status: string }>('/health', null)
       .then((r) => {
-        if (!cancelled) setHealthOk(r.status === 'ok');
+        if (!cancelled) {
+          setHealthOk(r.status === 'ok');
+          setHealthCheckedAt(new Date().toISOString());
+        }
       })
       .catch(() => {
-        if (!cancelled) setHealthOk(false);
+        if (!cancelled) {
+          setHealthOk(false);
+          setHealthCheckedAt(new Date().toISOString());
+        }
       });
   }, []);
 
   return (
     <>
       <style>{`
-        .af-admin-stat-row { display: flex; flex-wrap: wrap; }
+        .af-admin-stat-row { display: flex; flex-wrap: wrap; gap: 12px; }
         .af-admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         @media (max-width: 768px) {
           .af-admin-h1 { font-size: 20px !important; }
@@ -80,24 +91,42 @@ export function AdminPage({ token }: Props): React.ReactElement {
 
       <h1 style={styles.h1} className="af-admin-h1">
         Admin · Users
-        {healthOk !== null && (
-          <span
-            style={{
-              ...pill(healthOk ? colors.success : colors.danger),
-              marginLeft: 12,
-              verticalAlign: 'middle',
-              fontSize: 11,
-            }}
-          >
-            {healthOk ? 'System OK' : 'System degraded'}
-          </span>
-        )}
       </h1>
-      <p style={{ fontSize: 13, color: colors.textMuted, marginTop: -8, marginBottom: 16 }}>
+      <p style={{ fontSize: 13, color: colors.textMuted, marginTop: -8, marginBottom: 24 }}>
         Read-only in Phase V-1. Role editing and user-lifecycle actions are deferred to V-2 pending
         a governance escalation (CLAUDE.md §Approval Boundaries).
       </p>
       {err && <p style={styles.err}>{err}</p>}
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        <button style={styles.btn} onClick={() => goto('#/audit')}>
+          View audit log
+        </button>
+        <button style={styles.btnGhost} onClick={() => goto('#/security')}>
+          Security
+        </button>
+      </div>
+
+      {healthOk !== null && (
+        <div
+          style={{
+            ...styles.card,
+            borderLeft: `4px solid ${healthOk ? colors.success : colors.danger}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <span style={pill(healthOk ? colors.success : colors.danger)}>
+            {healthOk ? 'System OK' : 'System degraded'}
+          </span>
+          <span style={{ fontWeight: 600 }}>System health</span>
+          <span style={{ color: colors.textDim, fontSize: 12 }}>
+            via GET /health
+            {healthCheckedAt && ` · checked ${relativeTime(healthCheckedAt)}`}
+          </span>
+        </div>
+      )}
 
       {summary && (
         <div className="af-admin-stat-row">
@@ -148,7 +177,10 @@ export function AdminPage({ token }: Props): React.ReactElement {
         </div>
       )}
 
-      <section aria-label="User list" style={styles.card}>
+      <section
+        aria-label="User list"
+        style={{ ...styles.card, borderLeft: `4px solid ${colors.primary}` }}
+      >
         <h3 style={styles.h3}>
           Users
           {items && (
