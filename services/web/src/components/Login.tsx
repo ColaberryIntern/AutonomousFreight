@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../api';
-import { styles } from '../styles';
+import { colors, styles } from '../styles';
 import type { User } from '../types';
 
 interface Props {
@@ -31,10 +31,34 @@ export function Login({ onLogin }: Props): React.ReactElement {
   }
 
   return (
-    <div style={styles.loginWrap}>
-      <h1 style={styles.h1}>Autonomous Freight</h1>
-      <div style={styles.card}>
-        <form onSubmit={submit}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        background: colors.bg,
+      }}
+    >
+      <div style={styles.loginWrap}>
+        <h1 style={{ ...styles.h1, textAlign: 'center', marginBottom: 4 }}>
+          Autonomous Freight
+        </h1>
+        <div
+          aria-hidden="true"
+          style={{
+            textAlign: 'center',
+            color: colors.primary,
+            fontSize: 22,
+            lineHeight: 1,
+            marginBottom: 12,
+          }}
+        >
+          ▾
+        </div>
+        <div style={styles.card}>
+          <form onSubmit={submit}>
           <label style={styles.label}>
             Email
             <input
@@ -64,6 +88,7 @@ export function Login({ onLogin }: Props): React.ReactElement {
             <code>AdminPassword99</code>.
           </p>
         </form>
+        </div>
       </div>
     </div>
   );
