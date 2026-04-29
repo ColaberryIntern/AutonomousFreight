@@ -216,72 +216,74 @@ export function App(): React.ReactElement {
           Operating System
         </div>
 
-        {NAV_GROUPS.map((group) => {
-          if (!hasRole(user, group.requiresRole)) return null;
-          const visibleItems = group.items.filter((n) => hasRole(user, n.requiresRole));
-          if (visibleItems.length === 0) return null;
+        <nav aria-label="Primary">
+          {NAV_GROUPS.map((group) => {
+            if (!hasRole(user, group.requiresRole)) return null;
+            const visibleItems = group.items.filter((n) => hasRole(user, n.requiresRole));
+            if (visibleItems.length === 0) return null;
 
-          const isCollapsible = group.collapsed === true;
-          const isExpanded = isCollapsible ? systemExpanded : true;
+            const isCollapsible = group.collapsed === true;
+            const isExpanded = isCollapsible ? systemExpanded : true;
 
-          return (
-            <div key={group.title}>
-              {isCollapsible ? (
-                <button style={collapseToggle} onClick={() => setSystemExpanded((e) => !e)}>
-                  <span>{group.title}</span>
-                  <span style={{ fontSize: 14 }}>{isExpanded ? '▾' : '▸'}</span>
-                </button>
-              ) : (
-                <div style={sectionHeader}>{group.title}</div>
-              )}
+            return (
+              <div key={group.title}>
+                {isCollapsible ? (
+                  <button style={collapseToggle} onClick={() => setSystemExpanded((e) => !e)}>
+                    <span>{group.title}</span>
+                    <span style={{ fontSize: 14 }}>{isExpanded ? '▾' : '▸'}</span>
+                  </button>
+                ) : (
+                  <div style={sectionHeader}>{group.title}</div>
+                )}
 
-              {isExpanded &&
-                visibleItems.map((n) => {
-                  const isActive = view === n.id;
-                  const isMuted = group.title === 'SYSTEM';
-                  return (
-                    <button
-                      key={n.id}
-                      style={{
-                        ...styles.sidebarLink,
-                        ...(isActive ? styles.sidebarLinkActive : {}),
-                        ...(isMuted && !isActive
-                          ? { color: 'rgba(255,255,255,0.55)', fontSize: 13 }
-                          : {}),
-                      }}
-                      onClick={() => { setHash(n.id); setView(n.id); }}
-                    >
-                      {n.label}
-                      {n.id === 'errors' && (
-                        <span
-                          style={{
-                            marginLeft: 6,
-                            display: 'inline-block',
-                            width: 8,
-                            height: 8,
-                            borderRadius: 4,
-                            background: colors.warn,
-                          }}
-                        />
-                      )}
-                      {n.id === 'compliance' && (
-                        <span
-                          style={{
-                            marginLeft: 6,
-                            display: 'inline-block',
-                            width: 8,
-                            height: 8,
-                            borderRadius: 4,
-                            background: colors.warn,
-                          }}
-                        />
-                      )}
-                    </button>
-                  );
-                })}
-            </div>
-          );
-        })}
+                {isExpanded &&
+                  visibleItems.map((n) => {
+                    const isActive = view === n.id;
+                    const isMuted = group.title === 'SYSTEM';
+                    return (
+                      <button
+                        key={n.id}
+                        style={{
+                          ...styles.sidebarLink,
+                          ...(isActive ? styles.sidebarLinkActive : {}),
+                          ...(isMuted && !isActive
+                            ? { color: 'rgba(255,255,255,0.55)', fontSize: 13 }
+                            : {}),
+                        }}
+                        onClick={() => { setHash(n.id); setView(n.id); }}
+                      >
+                        {n.label}
+                        {n.id === 'errors' && (
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              display: 'inline-block',
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              background: colors.warn,
+                            }}
+                          />
+                        )}
+                        {n.id === 'compliance' && (
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              display: 'inline-block',
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              background: colors.warn,
+                            }}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+              </div>
+            );
+          })}
+        </nav>
 
         <div style={{ flex: 1 }} />
         <div
