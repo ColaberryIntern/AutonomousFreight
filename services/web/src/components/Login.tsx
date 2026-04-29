@@ -57,7 +57,7 @@ export function Login({ onLogin }: Props): React.ReactElement {
         >
           ▾
         </div>
-        <div style={styles.card}>
+        <div style={{ ...styles.card, padding: 32 }}>
           <form onSubmit={submit}>
           <label style={styles.label}>
             Email
@@ -79,7 +79,7 @@ export function Login({ onLogin }: Props): React.ReactElement {
               defaultValue="GoodPassword99"
             />
           </label>
-          <button type="submit" disabled={busy} style={styles.btn}>
+          <button type="submit" disabled={busy} style={{ ...styles.btn, marginTop: 8 }}>
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
           {err && <p style={styles.err}>{err}</p>}
