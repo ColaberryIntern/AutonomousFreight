@@ -73,6 +73,11 @@ async function main(): Promise<void> {
     'utf8',
   );
   await pool.query(autonomySql);
+  const capacityIndexSql = readFileSync(
+    join(__dirname, '../../carrier/src/repo/migrations/013_capacity_shortage_indexes.sql'),
+    'utf8',
+  );
+  await pool.query(capacityIndexSql);
 
   const bus: EventBus = new InMemoryEventBus();
   const driver = buildEmailDriver(process.env);

@@ -135,6 +135,87 @@ export class CarrierRepository {
     }));
   }
 
+  /**
+   * Procurement-tick optimized listing: returns only quoting shipments
+   * whose cooldown has elapsed (or has never been checked). Replaces the
+   * 1+N pattern of listShipmentsByStatus + per-shipment SELECT
+   * last_agent_check_at. Backed by idx_shipments_status_last_check
+   * (migration 013).
+   */
+  async listShipmentsForProcurement(
+    limit = 50,
+    cooldownSec = 60,
+  ): Promise<ShipmentRecord[]> {
+    const r = await this.pool.query<{
+      id: string;
+      origin: string;
+      destination: string;
+      distance_miles: number;
+      status: ShipmentRecord['status'];
+    }>(
+      `SELECT id, origin, destination, distance_miles, status
+       FROM shipments
+       WHERE status = 'quoting'
+         AND (last_agent_check_at IS NULL
+              OR last_agent_check_at < NOW() - ($1::int || ' seconds')::interval)
+       ORDER BY created_at ASC
+       LIMIT $2`,
+      [cooldownSec, limit],
+    );
+    return r.rows.map((row) => ({
+      id: row.id,
+      origin: row.origin,
+      destination: row.destination,
+      distanceMiles: row.distance_miles,
+      status: row.status,
+    }));
+  }
+
+  async listCapacityShortageShipments(opts: {
+    minAgeMinutes?: number;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<
+    Array<{
+      shipmentId: string;
+      origin: string;
+      destination: string;
+      ageMinutes: number;
+      activeBidCount: number;
+    }>
+  > {
+    const minAgeMinutes = Math.max(opts.minAgeMinutes ?? 0, 0);
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
+    const offset = Math.max(opts.offset ?? 0, 0);
+    const r = await this.pool.query<{
+      id: string;
+      origin: string;
+      destination: string;
+      age_minutes: string;
+      active_bid_count: string;
+    }>(
+      `SELECT s.id, s.origin, s.destination,
+              EXTRACT(EPOCH FROM (NOW() - s.created_at)) / 60 AS age_minutes,
+              COUNT(b.carrier_id) FILTER (WHERE b.carrier_id IS NOT NULL) AS active_bid_count
+       FROM shipments s
+       LEFT JOIN carrier_bids b ON b.shipment_id = s.id
+       LEFT JOIN carriers c ON c.id = b.carrier_id AND c.active = TRUE
+       WHERE s.status = 'quoting'
+         AND s.created_at <= NOW() - ($1::int || ' minutes')::interval
+       GROUP BY s.id, s.origin, s.destination, s.created_at
+       ORDER BY s.created_at ASC
+       LIMIT $2 OFFSET $3`,
+      [minAgeMinutes, limit, offset],
+    );
+    return r.rows.map((row) => ({
+      shipmentId: row.id,
+      origin: row.origin,
+      destination: row.destination,
+      ageMinutes: Math.floor(Number(row.age_minutes)),
+      activeBidCount: Number(row.active_bid_count),
+    }));
+  }
+
   async assignCarrierWithMeta(
     shipmentId: string,
     carrierId: string,

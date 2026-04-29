@@ -20,6 +20,10 @@ import {
   summarizeSamples,
   type AutonomyOperation,
 } from '../domain/autonomy';
+import {
+  classifyShortage,
+  DEFAULT_THRESHOLDS as CAPACITY_THRESHOLDS,
+} from '../domain/capacityShortage';
 import { computeReconciliation } from '../domain/reconciliation';
 import { rankCarriers, WEIGHTS } from '../domain/scoring';
 import { AutonomyRepository } from '../repo/autonomyRepository';
@@ -786,6 +790,85 @@ export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRoute
       });
     }
   });
+
+  router.get(
+    '/api/v1/shipments/capacity-shortage',
+    requireAuth(jwtSecret),
+    requireRole('admin', 'broker'),
+    async (req, res) => {
+      const requestId = req.requestId ?? '-';
+      const startedAt = Date.now();
+      const limitRaw = Number(req.query['limit'] ?? 50);
+      const offsetRaw = Number(req.query['offset'] ?? 0);
+      const minAgeRaw = Number(req.query['minAgeMinutes'] ?? CAPACITY_THRESHOLDS.noBidsAfterMin);
+      const limit =
+        Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(Math.floor(limitRaw), 200) : 50;
+      const offset = Number.isFinite(offsetRaw) && offsetRaw >= 0 ? Math.floor(offsetRaw) : 0;
+      const minAgeMinutes = Number.isFinite(minAgeRaw) && minAgeRaw >= 0 ? Math.floor(minAgeRaw) : 0;
+
+      const cacheKey = `shipments:capacity-shortage:${minAgeMinutes}:${limit}:${offset}`;
+      const loader = async (): Promise<{
+        items: Array<{
+          shipmentId: string;
+          origin: string;
+          destination: string;
+          ageMinutes: number;
+          activeBidCount: number;
+          classification: ReturnType<typeof classifyShortage>;
+        }>;
+        thresholds: typeof CAPACITY_THRESHOLDS;
+        generatedAt: string;
+      }> => {
+        const rows = await withRetry(
+          () => repo.listCapacityShortageShipments({ minAgeMinutes, limit, offset }),
+          {
+            attempts: 2,
+            baseDelayMs: 100,
+            onAttemptFailed: (n, err) => {
+              console.warn('[capacity-shortage] retry', {
+                requestId,
+                attempt: n,
+                err: String(err),
+              });
+            },
+          },
+        );
+        return {
+          items: rows.map((row) => ({
+            ...row,
+            classification: classifyShortage({
+              ageMinutes: row.ageMinutes,
+              activeBidCount: row.activeBidCount,
+              // hardBlockedCount is not surfaced from this query — gates
+              // require per-bid carrier+compliance lookups. The endpoint
+              // therefore reports no_bids / stale / normal; all_blocked
+              // is determined by the procurement agent's audit signal.
+              hardBlockedCount: 0,
+            }),
+          })),
+          thresholds: CAPACITY_THRESHOLDS,
+          generatedAt: new Date().toISOString(),
+        };
+      };
+      try {
+        const data = cache ? await wrap(cache, cacheKey, 30, loader) : await loader();
+        console.warn('[capacity-shortage] ok', {
+          requestId,
+          durationMs: Date.now() - startedAt,
+          count: data.items.length,
+          minAgeMinutes,
+        });
+        res.status(200).json(data);
+      } catch (err) {
+        console.error('[capacity-shortage] failed', { requestId, err: String(err) });
+        res.status(503).json({
+          error: 'capacity_shortage_unavailable',
+          message: 'Capacity shortage view temporarily unavailable. Please retry.',
+          requestId,
+        });
+      }
+    },
+  );
 
   router.get(
     '/api/v1/financials/reconciliation',

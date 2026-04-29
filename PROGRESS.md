@@ -130,6 +130,15 @@ This file is read by Claude at the start of every session to maintain context co
 - [x] All routes structured-logged + 503 fallback on DB failure
 - [x] 10 new unit tests (summarizeSamples, evaluateGraduation across all level transitions)
 
+### Capacity Shortage — performance + visibility
+- [x] Migration 013 — composite index idx_shipments_status_last_check supports cooldown filter
+- [x] N+1 fix in procurement agent — cooldown filter moved to SQL (1+50 round-trips → 1)
+- [x] CarrierRepository.listShipmentsForProcurement — eager-loads cooldown, filters server-side
+- [x] CarrierRepository.listCapacityShortageShipments — paginated LEFT JOIN with bid counts
+- [x] classifyShortage domain helper — pure no_bids / all_blocked / stale / normal classification
+- [x] GET /api/v1/shipments/capacity-shortage (admin/broker) — 30s-cached, withRetry-wrapped
+- [x] 7 new unit tests for classifyShortage
+
 ### Admin Dashboard — backend
 - [x] computeAdminSummary domain helper — user counts by role, MFA adoption %, registrations last 7d, admin-action volume + top actions (24h)
 - [x] UserRepository.searchUsers — optional email ILIKE + role filter (additive; listUsers no-args path preserved)
@@ -146,9 +155,9 @@ This file is read by Claude at the start of every session to maintain context co
 ## Current State
 
 - **Agents**: 10 (Quoting, Procurement, Tracking, Document, Rate Audit, Invoice, Payment Match, Settlement, Dispute, Health Monitor)
-- **API Routes**: 42+
-- **Tests**: 237 unit tests passing (43 suites)
-- **Migrations**: 12 (001-012)
+- **API Routes**: 43+
+- **Tests**: 244 unit tests passing (44 suites)
+- **Migrations**: 13 (001-013)
 - **Frontend**: 15 React components, lazy-loaded, hash-routed
 - **Deploy**: Docker Compose on Hetzner VPS (port 8889)
 

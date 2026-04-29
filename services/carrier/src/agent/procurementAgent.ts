@@ -32,19 +32,12 @@ export async function runProcurementTick(deps: ProcurementDeps): Promise<Procure
     cooldown: 0,
   };
 
-  const shipments = await deps.carrierRepo.listShipmentsByStatus('quoting', 50);
+  // Cooldown filter is now SQL-side (migration 013 + listShipmentsForProcurement),
+  // so the loop only sees shipments actually due for re-check. Eliminates the
+  // 1+N pattern that previously did SELECT last_agent_check_at per shipment.
+  const shipments = await deps.carrierRepo.listShipmentsForProcurement(50, RECHECK_INTERVAL_SEC);
   for (const ship of shipments) {
     try {
-      const fresh = await deps.carrierRepo.pool.query<{ last_agent_check_at: Date | null }>(
-        `SELECT last_agent_check_at FROM shipments WHERE id = $1`,
-        [ship.id],
-      );
-      const lastCheck = fresh.rows[0]?.last_agent_check_at;
-      if (lastCheck && Date.now() - lastCheck.getTime() < RECHECK_INTERVAL_SEC * 1000) {
-        result.cooldown++;
-        continue;
-      }
-
       const bids = await deps.carrierRepo.listActiveBidsForShipment(ship.id);
       if (bids.length === 0) {
         result.skipped++;
