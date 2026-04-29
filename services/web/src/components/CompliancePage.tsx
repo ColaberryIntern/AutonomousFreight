@@ -1,8 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { api } from '../api';
+import { api, apiWithRetry } from '../api';
 import { colors, pill, styles } from '../styles';
 import type { ComplianceSummary, ExpiringArtifact } from '../types';
+
+interface HealthCheck {
+  metric: string;
+  label: string;
+  count: number;
+  threshold: number;
+  status: 'ok' | 'alert';
+  windowHours: number;
+}
+
+interface HealthSnapshot {
+  checks: HealthCheck[];
+  generatedAt: string;
+}
 
 interface Props {
   token: string;
@@ -22,6 +36,7 @@ function daysUntil(iso: string): number {
 export function CompliancePage({ token }: Props): React.ReactElement {
   const [summary, setSummary] = useState<ComplianceSummary | null>(null);
   const [expiring, setExpiring] = useState<ExpiringArtifact[] | null>(null);
+  const [gateCheck, setGateCheck] = useState<HealthCheck | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,6 +51,17 @@ export function CompliancePage({ token }: Props): React.ReactElement {
       .catch((e) => setErr(String(e)));
   }, [token]);
 
+  // Surface the Health Monitor agent's gate_blocks signal — the compliance-relevant
+  // metric. Single fetch (the page is browsed, not watched).
+  useEffect(() => {
+    apiWithRetry<HealthSnapshot>('/api/v1/agents/health', token)
+      .then((r) => {
+        const gate = r.checks.find((c) => c.metric === 'gate_blocks');
+        if (gate) setGateCheck(gate);
+      })
+      .catch(() => {});
+  }, [token]);
+
   if (err) return <p style={styles.err}>{err}</p>;
   if (!summary || !expiring) return <p>Loading…</p>;
 
@@ -45,12 +71,54 @@ export function CompliancePage({ token }: Props): React.ReactElement {
   return (
     <>
       <h1 style={styles.h1}>Carrier Compliance</h1>
-      <p style={{ fontSize: 13, color: colors.textMuted, marginTop: -8, marginBottom: 16 }}>
+      <p style={{ fontSize: 13, color: colors.textMuted, marginTop: -8, marginBottom: 24 }}>
         Risk distribution, artifact health, and upcoming expirations across the active carrier
         network.
       </p>
 
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        <button
+          style={styles.btn}
+          onClick={() => {
+            window.location.hash = '#/carriers';
+          }}
+        >
+          View carriers
+        </button>
+        <button
+          style={styles.btnGhost}
+          onClick={() => {
+            window.location.hash = '#/audit';
+          }}
+        >
+          View audit log
+        </button>
+      </div>
+
+      {gateCheck && (
+        <div
+          style={{
+            ...styles.card,
+            borderLeft: `4px solid ${
+              gateCheck.status === 'alert' ? colors.danger : colors.success
+            }`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <span style={pill(gateCheck.status === 'alert' ? colors.danger : colors.success)}>
+            {gateCheck.status === 'alert' ? 'Alert' : 'Normal'}
+          </span>
+          <span style={{ fontWeight: 600 }}>Compliance gate blocks (1h)</span>
+          <span style={{ color: colors.textDim }}>
+            {gateCheck.count} block{gateCheck.count === 1 ? '' : 's'} · threshold{' '}
+            {gateCheck.threshold}
+          </span>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
         <div style={{ ...styles.card, flex: 1, minWidth: 320 }}>
           <h3
             style={styles.h3}
