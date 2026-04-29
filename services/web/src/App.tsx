@@ -131,6 +131,25 @@ function loadSession(): { token: string; user: User } | null {
   return null;
 }
 
+// Honor `?logout` in the URL so a bookmark like `/?logout` always lands
+// on the login screen, even with a valid session in localStorage.
+// The query param is stripped after handling so the URL stays tidy.
+(function handleLogoutParam(): void {
+  if (typeof window === 'undefined') return;
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('logout')) {
+    localStorage.removeItem('af_token');
+    localStorage.removeItem('af_user');
+    params.delete('logout');
+    const remaining = params.toString();
+    const newUrl =
+      window.location.pathname +
+      (remaining ? `?${remaining}` : '') +
+      window.location.hash;
+    window.history.replaceState(null, '', newUrl);
+  }
+})();
+
 function saveSession(token: string, user: User): void {
   localStorage.setItem('af_token', token);
   localStorage.setItem('af_user', JSON.stringify(user));
