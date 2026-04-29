@@ -35,10 +35,13 @@ export function AuditPage({ token }: Props): React.ReactElement {
 
   return (
     <>
-      <h1 style={styles.h1}>Audit</h1>
+      <h1 style={styles.h1}>Audit Log</h1>
+      <p style={{ fontSize: 13, color: colors.textMuted, marginTop: -8, marginBottom: 16 }}>
+        Immutable system event log — filter by action prefix to drill into a workflow.
+      </p>
       {err && <p style={styles.err}>{err}</p>}
       <div style={styles.card}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           <input
             style={{ ...styles.input, maxWidth: 320 }}
             placeholder="Filter by action (e.g. shipment.assigned)"

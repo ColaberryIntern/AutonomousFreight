@@ -44,11 +44,20 @@ export function CompliancePage({ token }: Props): React.ReactElement {
 
   return (
     <>
-      <h1 style={styles.h1}>Compliance</h1>
+      <h1 style={styles.h1}>Carrier Compliance</h1>
+      <p style={{ fontSize: 13, color: colors.textMuted, marginTop: -8, marginBottom: 16 }}>
+        Risk distribution, artifact health, and upcoming expirations across the active carrier
+        network.
+      </p>
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ ...styles.card, flex: 1, minWidth: 320 }}>
-          <h3 style={styles.h3}>Carrier risk distribution</h3>
+          <h3
+            style={styles.h3}
+            title="Carriers bucketed by composite risk score (green/amber/red); unknown = no compliance snapshot on file."
+          >
+            Carrier risk distribution
+          </h3>
           <div style={{ height: 240 }}>
             <ResponsiveContainer>
               <PieChart>
@@ -72,7 +81,12 @@ export function CompliancePage({ token }: Props): React.ReactElement {
         </div>
 
         <div style={{ ...styles.card, flex: 1, minWidth: 320 }}>
-          <h3 style={styles.h3}>Artifacts by type</h3>
+          <h3
+            style={styles.h3}
+            title="Counts of compliance artifacts (insurance, MC authority, safety rating, etc.) currently on file."
+          >
+            Artifacts by type
+          </h3>
           {byType.length === 0 ? (
             <p style={{ color: colors.textMuted }}>No compliance artifacts seeded.</p>
           ) : (
@@ -95,7 +109,12 @@ export function CompliancePage({ token }: Props): React.ReactElement {
       </div>
 
       <div style={styles.card}>
-        <h3 style={styles.h3}>Artifacts expiring (90-day window)</h3>
+        <h3
+          style={styles.h3}
+          title="Artifacts whose expiry falls within the next 90 days. Already-expired rows are highlighted."
+        >
+          Artifacts expiring (90-day window)
+        </h3>
         {expiring.length === 0 ? (
           <p style={{ color: colors.textMuted }}>No artifacts within window.</p>
         ) : (
@@ -114,7 +133,7 @@ export function CompliancePage({ token }: Props): React.ReactElement {
                 const pillColor = a.expired ? colors.danger : d < 30 ? colors.warn : colors.success;
                 const pillText = a.expired ? `expired ${-d}d ago` : `in ${d}d`;
                 return (
-                  <tr key={a.id}>
+                  <tr key={a.id} style={a.expired ? { background: '#fef2f2' } : undefined}>
                     <td style={styles.td}>{a.artifactType.replace(/_/g, ' ')}</td>
                     <td style={styles.td}>
                       <code style={{ fontSize: 12 }}>{a.reference}</code>
