@@ -138,6 +138,11 @@ This file is read by Claude at the start of every session to maintain context co
 - [x] classifyShortage domain helper — pure no_bids / all_blocked / stale / normal classification
 - [x] GET /api/v1/shipments/capacity-shortage (admin/broker) — 30s-cached, withRetry-wrapped
 - [x] 7 new unit tests for classifyShortage
+- [x] Capacity Shortage Agent (11th agent) — autonomous detection every 5s, 5m per-shipment cooldown
+- [x] Registered in AGENT_REGISTRY (visible in war room, dept=procurement)
+- [x] GET /api/v1/shipments/capacity-shortage/summary — aggregate counts by classification (cached)
+- [x] POST /api/v1/shipments/:id/capacity-shortage/escalate (admin/broker) — manual escalation w/ audit
+- [x] 5 new unit tests for capacity shortage agent
 
 ### Admin Dashboard — backend
 - [x] computeAdminSummary domain helper — user counts by role, MFA adoption %, registrations last 7d, admin-action volume + top actions (24h)
@@ -154,9 +159,9 @@ This file is read by Claude at the start of every session to maintain context co
 
 ## Current State
 
-- **Agents**: 10 (Quoting, Procurement, Tracking, Document, Rate Audit, Invoice, Payment Match, Settlement, Dispute, Health Monitor)
-- **API Routes**: 43+
-- **Tests**: 244 unit tests passing (44 suites)
+- **Agents**: 11 (Quoting, Procurement, Tracking, Document, Rate Audit, Invoice, Payment Match, Settlement, Dispute, Health Monitor, Capacity Shortage)
+- **API Routes**: 45+
+- **Tests**: 249 unit tests passing (45 suites)
 - **Migrations**: 13 (001-013)
 - **Frontend**: 15 React components, lazy-loaded, hash-routed
 - **Deploy**: Docker Compose on Hetzner VPS (port 8889)

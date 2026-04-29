@@ -244,6 +244,15 @@ export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRoute
       directive: '190',
       auditPrefix: 'agent.health_monitor.',
     },
+    {
+      name: 'capacity_shortage_agent',
+      label: 'Capacity Shortage',
+      department: 'procurement',
+      type: 'monitoring',
+      schedule: 'Every 5s — detects stuck quoting shipments (5m cooldown per shipment)',
+      directive: '210',
+      auditPrefix: 'agent.capacity_shortage.',
+    },
   ] as const;
 
   router.get('/api/v1/agents', requireAuth(jwtSecret), async (_req, res) => {
@@ -867,6 +876,128 @@ export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRoute
           requestId,
         });
       }
+    },
+  );
+
+  router.get(
+    '/api/v1/shipments/capacity-shortage/summary',
+    requireAuth(jwtSecret),
+    requireRole('admin', 'broker'),
+    async (req, res) => {
+      const requestId = req.requestId ?? '-';
+      const startedAt = Date.now();
+      const cacheKey = 'shipments:capacity-shortage:summary';
+      const loader = async (): Promise<{
+        counts: Record<ReturnType<typeof classifyShortage>, number>;
+        oldestAgeMinutes: number;
+        total: number;
+        thresholds: typeof CAPACITY_THRESHOLDS;
+        generatedAt: string;
+      }> => {
+        const rows = await withRetry(
+          () =>
+            repo.listCapacityShortageShipments({
+              minAgeMinutes: 0,
+              limit: 200,
+            }),
+          {
+            attempts: 2,
+            baseDelayMs: 100,
+            onAttemptFailed: (n, err) => {
+              console.warn('[capacity-shortage.summary] retry', {
+                requestId,
+                attempt: n,
+                err: String(err),
+              });
+            },
+          },
+        );
+        const counts: Record<ReturnType<typeof classifyShortage>, number> = {
+          no_bids: 0,
+          all_blocked: 0,
+          stale: 0,
+          normal: 0,
+        };
+        let oldestAgeMinutes = 0;
+        for (const row of rows) {
+          const cls = classifyShortage({
+            ageMinutes: row.ageMinutes,
+            activeBidCount: row.activeBidCount,
+            hardBlockedCount: 0,
+          });
+          counts[cls]++;
+          if (row.ageMinutes > oldestAgeMinutes) oldestAgeMinutes = row.ageMinutes;
+        }
+        return {
+          counts,
+          oldestAgeMinutes,
+          total: rows.length,
+          thresholds: CAPACITY_THRESHOLDS,
+          generatedAt: new Date().toISOString(),
+        };
+      };
+      try {
+        const data = cache ? await wrap(cache, cacheKey, 30, loader) : await loader();
+        console.warn('[capacity-shortage.summary] ok', {
+          requestId,
+          durationMs: Date.now() - startedAt,
+          total: data.total,
+        });
+        res.status(200).json(data);
+      } catch (err) {
+        console.error('[capacity-shortage.summary] failed', { requestId, err: String(err) });
+        res.status(503).json({
+          error: 'capacity_shortage_unavailable',
+          message: 'Capacity shortage summary temporarily unavailable. Please retry.',
+          requestId,
+        });
+      }
+    },
+  );
+
+  const EscalateBody = z.object({
+    reason: z.string().min(10).max(500),
+  });
+
+  router.post(
+    '/api/v1/shipments/:id/capacity-shortage/escalate',
+    requireAuth(jwtSecret),
+    requireRole('admin', 'broker'),
+    async (req, res) => {
+      const requestId = req.requestId ?? '-';
+      const raw = req.params['id'];
+      const shipmentId = typeof raw === 'string' ? raw : '';
+      if (!UUID_RE.test(shipmentId)) {
+        res.status(400).json({ error: 'invalid_shipment_id' });
+        return;
+      }
+      const parsed = EscalateBody.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'invalid_input', details: parsed.error.issues });
+        return;
+      }
+      const shipment = await repo.findShipmentById(shipmentId);
+      if (!shipment) {
+        res.status(404).json({ error: 'shipment_not_found' });
+        return;
+      }
+      const escalatedAt = new Date().toISOString();
+      const auditEntry: Parameters<typeof audit.record>[0] = {
+        action: 'shortage.escalated',
+        target: shipmentId,
+        metadata: {
+          reason: parsed.data.reason,
+          shipmentStatus: shipment.status,
+        },
+      };
+      if (req.user?.userId) auditEntry.actorUserId = req.user.userId;
+      void audit.record(auditEntry);
+      console.warn('[capacity-shortage.escalate] ok', {
+        requestId,
+        shipmentId,
+        byUserId: req.user?.userId ?? null,
+      });
+      res.status(201).json({ ok: true, shipmentId, escalatedAt });
     },
   );
 

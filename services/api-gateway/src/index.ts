@@ -98,6 +98,9 @@ async function main(): Promise<void> {
   const { runSettlementTick } = await import('../../carrier/src/agent/settlementAgent');
   const { runDisputeTick } = await import('../../carrier/src/agent/disputeAgent');
   const { runHealthMonitorTick } = await import('../../carrier/src/agent/healthMonitorAgent');
+  const { runCapacityShortageTick } = await import(
+    '../../carrier/src/agent/capacityShortageAgent'
+  );
 
   const agentInterval = 5000;
   const agentLoop = async (): Promise<void> => {
@@ -147,6 +150,11 @@ async function main(): Promise<void> {
       await runHealthMonitorTick({ pool, audit });
     } catch (err) {
       console.error('[agent-loop] health-monitor error', err);
+    }
+    try {
+      await runCapacityShortageTick({ carrierRepo, audit });
+    } catch (err) {
+      console.error('[agent-loop] capacity-shortage error', err);
     }
     setTimeout(() => void agentLoop(), agentInterval);
   };
