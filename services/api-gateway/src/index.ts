@@ -101,6 +101,9 @@ async function main(): Promise<void> {
   const { runCapacityShortageTick } = await import(
     '../../carrier/src/agent/capacityShortageAgent'
   );
+  const { runAdminActivityTick } = await import(
+    '../../carrier/src/agent/adminActivityAgent'
+  );
 
   const agentInterval = 5000;
   const agentLoop = async (): Promise<void> => {
@@ -155,6 +158,11 @@ async function main(): Promise<void> {
       await runCapacityShortageTick({ carrierRepo, audit });
     } catch (err) {
       console.error('[agent-loop] capacity-shortage error', err);
+    }
+    try {
+      await runAdminActivityTick({ pool, audit });
+    } catch (err) {
+      console.error('[agent-loop] admin-activity error', err);
     }
     setTimeout(() => void agentLoop(), agentInterval);
   };

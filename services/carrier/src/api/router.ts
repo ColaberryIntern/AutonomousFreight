@@ -253,6 +253,15 @@ export function buildCarrierRouter({ pool, jwtSecret, bus, cache }: CarrierRoute
       directive: '210',
       auditPrefix: 'agent.capacity_shortage.',
     },
+    {
+      name: 'admin_activity_agent',
+      label: 'Admin Activity',
+      department: 'operations',
+      type: 'monitoring',
+      schedule: 'Every 5s — admin KPI thresholds (5m cooldown per metric)',
+      directive: '060',
+      auditPrefix: 'agent.admin_monitor.',
+    },
   ] as const;
 
   router.get('/api/v1/agents', requireAuth(jwtSecret), async (_req, res) => {

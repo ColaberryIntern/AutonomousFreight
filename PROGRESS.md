@@ -153,15 +153,20 @@ This file is read by Claude at the start of every session to maintain context co
 - [x] GET /api/v1/admin/summary — population health + admin audit roll-up (admin only, withRetry-wrapped)
 - [x] All routes structured-logged + 503 fallback consistent with dashboard hardening
 - [x] 5 new unit tests for computeAdminSummary
+- [x] AdminPage UI — KPI cards + System OK pill + responsive @media (max-width: 768px) + section landmark
+- [x] Admin Activity Agent (12th agent) — autonomous threshold monitoring on MFA adoption, registration spikes, admin-action volume
+- [x] Per-metric 5-min cooldown; ADMIN_ACTION_PATTERNS shared with /admin/summary so dashboard + agent never drift
+- [x] Registered in AGENT_REGISTRY (dept=operations, audit prefix agent.admin_monitor.)
+- [x] 7 new unit tests for runAdminActivityTick
 - Note: role mutation remains deferred per CLAUDE.md governance boundary
 
 ---
 
 ## Current State
 
-- **Agents**: 11 (Quoting, Procurement, Tracking, Document, Rate Audit, Invoice, Payment Match, Settlement, Dispute, Health Monitor, Capacity Shortage)
+- **Agents**: 12 (Quoting, Procurement, Tracking, Document, Rate Audit, Invoice, Payment Match, Settlement, Dispute, Health Monitor, Capacity Shortage, Admin Activity)
 - **API Routes**: 45+
-- **Tests**: 249 unit tests passing (45 suites)
+- **Tests**: 256 unit tests passing (46 suites)
 - **Migrations**: 13 (001-013)
 - **Frontend**: 15 React components, lazy-loaded, hash-routed
 - **Deploy**: Docker Compose on Hetzner VPS (port 8889)
