@@ -1,0 +1,112 @@
+{
+  "_comment": "Three worked examples against the canonical RFQ schema v1. Each example validates against docs/dat-rfq-payload-schema.json.",
+  "examples": [
+    {
+      "_label": "EX-1: simplest valid case (single pickup, single delivery, single commodity, email channel).",
+      "_replaces": "Karun's original May 21 payload in this ticket - expressed canonically.",
+      "rfqId": "rfq_01JV9QX3G7V8YQK9C7F0H1J2K3",
+      "schemaVersion": "1.0",
+      "source": {
+        "channel": "email",
+        "messageId": "gmail-thread-19e750c865902096",
+        "receivedAt": "2026-05-21T12:00:00Z",
+        "rawRef": "s3://shipces-inbound/raw/gmail-19e750c865902096.eml"
+      },
+      "customer": {
+        "customerId": "cust_01JV9QX3G7V8YQK9C7F0H1J2K4",
+        "companyName": "ABC Manufacturing",
+        "contacts": [
+          { "role": "dispatcher", "name": "John Dispatcher", "email": "dispatch@broker.com", "phone": "+15555555555" }
+        ]
+      },
+      "shipment": {
+        "mode": "FTL",
+        "stops": [
+          {
+            "sequence": 1,
+            "stopType": "pickup",
+            "location": { "city": "Dallas", "state": "TX", "postalCode": "75201", "country": "US" },
+            "timing": { "appointmentRequired": false, "windows": [ { "date": "2026-05-25", "timezone": "America/Chicago", "sentiment": "ready_at", "timeStart": "08:00", "timeEnd": "12:00" } ] }
+          },
+          {
+            "sequence": 2,
+            "stopType": "delivery",
+            "location": { "city": "Chicago", "state": "IL", "postalCode": "60601", "country": "US" },
+            "timing": { "appointmentRequired": true, "windows": [ { "date": "2026-05-27", "timezone": "America/Chicago", "sentiment": "deliver_by", "timeEnd": "17:00" } ] }
+          }
+        ],
+        "commodities": [
+          { "description": "Paper Products", "weightLb": 42000, "palletCount": 26, "stackable": false, "hazmat": { "isHazmat": false } }
+        ],
+        "equipmentOptions": [
+          { "equipmentType": "VAN", "vehicleSize": "53 dry van", "specialRequirements": [], "insuranceMinimum": 100000 }
+        ]
+      },
+      "serviceTypes": ["FTL"],
+      "pricingRequest": { "currency": "USD", "targetRate": 2400, "fuelIncluded": true, "requestedBy": "customer" },
+      "language": "en",
+      "rawExtraction": { "overallConfidence": 0.96, "fieldConfidence": { "shipment.stops[0].location": 1.0, "shipment.stops[1].location": 1.0, "shipment.commodities[0].weightLb": 0.95 }, "needsHumanReview": false, "hitlReason": "none" },
+      "status": "NEW",
+      "createdAt": "2026-05-21T12:00:00Z"
+    },
+    {
+      "_label": "EX-2: multi-pickup, single delivery (consolidation run). WhatsApp inbound.",
+      "_demonstrates": "Plural stops[]; one commodity per pickup tied via originStopSequence.",
+      "rfqId": "rfq_01JV9R000000000000000000A1",
+      "schemaVersion": "1.0",
+      "source": { "channel": "whatsapp", "messageId": "wa.msg.AEK7uLmBz9xT", "receivedAt": "2026-06-02T15:42:00Z", "rawRef": "s3://shipces-inbound/raw/wa-AEK7uLmBz9xT.json" },
+      "customer": { "customerId": "cust_01JV9R000000000000000000A2", "companyName": "Monterrey Logistics S.A.", "contacts": [ { "role": "primary", "name": "Luis Hernandez", "email": "luis@monterreylog.mx", "phone": "+528112345678" } ] },
+      "shipment": {
+        "mode": "FTL",
+        "stops": [
+          { "sequence": 1, "stopType": "pickup",   "location": { "facilityName": "Plant A", "city": "Saltillo", "state": "COA", "country": "MX" }, "timing": { "windows": [ { "date": "2026-06-08", "sentiment": "ready_at", "timeStart": "07:00", "timeEnd": "11:00", "timezone": "America/Monterrey" } ] } },
+          { "sequence": 2, "stopType": "pickup",   "location": { "facilityName": "Plant B", "city": "Monterrey", "state": "NLE", "country": "MX" }, "timing": { "windows": [ { "date": "2026-06-08", "sentiment": "ready_at", "timeStart": "14:00", "timeEnd": "18:00", "timezone": "America/Monterrey" } ] } },
+          { "sequence": 3, "stopType": "delivery", "location": { "facilityName": "DC Laredo", "city": "Laredo", "state": "TX", "postalCode": "78045", "country": "US" }, "timing": { "appointmentRequired": true, "windows": [ { "date": "2026-06-09", "sentiment": "deliver_by", "timeEnd": "12:00", "timezone": "America/Chicago" } ] } }
+        ],
+        "commodities": [
+          { "description": "Auto parts", "weightLb": 18000, "palletCount": 12, "originStopSequence": 1, "destinationStopSequence": 3 },
+          { "description": "Plastic resins", "weightLb": 22000, "palletCount": 14, "originStopSequence": 2, "destinationStopSequence": 3 }
+        ],
+        "equipmentOptions": [
+          { "equipmentType": "VAN", "vehicleSize": "53 dry van", "specialRequirements": ["FAST"], "insuranceMinimum": 100000 }
+        ]
+      },
+      "serviceTypes": ["FTL"],
+      "pricingRequest": { "currency": "USD", "requestedBy": "customer" },
+      "language": "es",
+      "rawExtraction": { "overallConfidence": 0.88, "fieldConfidence": { "shipment.stops[1].location.state": 0.78 }, "needsHumanReview": true, "hitlReason": "extraction" },
+      "status": "VALIDATING",
+      "createdAt": "2026-06-02T15:42:00Z"
+    },
+    {
+      "_label": "EX-3: multi-service-type RFQ (Karun D5 + Brett Pair A/B/C). Telegram inbound. Expedite request that can be quoted as Solo OR Team OR Exclusive.",
+      "_demonstrates": "Plural serviceTypes[] driving multi-option quoting downstream; multi-equipmentOptions[]; appointmentRequired branching.",
+      "rfqId": "rfq_01JV9R000000000000000000B1",
+      "schemaVersion": "1.0",
+      "source": { "channel": "telegram", "messageId": "tg.update.4823917", "receivedAt": "2026-06-03T03:11:45Z" },
+      "customer": { "customerId": "cust_01JV9R000000000000000000B2", "companyName": "Continental Tier-1 Supplier", "contacts": [ { "role": "shipper", "name": "Operator on Duty", "phone": "+12145557777" } ] },
+      "shipment": {
+        "mode": "EXPEDITE_TEAM",
+        "stops": [
+          { "sequence": 1, "stopType": "pickup",   "location": { "city": "El Paso", "state": "TX", "country": "US" }, "timing": { "windows": [ { "date": "2026-06-03", "sentiment": "asap", "timezone": "America/Denver" } ] }, "instructions": "Direct pickup, no dock. Driver calls 30 min out." },
+          { "sequence": 2, "stopType": "delivery", "location": { "city": "Detroit", "state": "MI", "country": "US" }, "timing": { "windows": [ { "date": "2026-06-04", "sentiment": "deliver_by", "timeEnd": "06:00", "timezone": "America/Detroit" } ] } }
+        ],
+        "commodities": [
+          { "description": "Tier-1 line-down auto parts", "weightLb": 3200, "pieces": 14, "highValue": true, "hazmat": { "isHazmat": false } }
+        ],
+        "equipmentOptions": [
+          { "equipmentType": "CARGO_VAN", "vehicleSize": "Cargo Van", "insuranceMinimum": 250000 },
+          { "equipmentType": "SPRINTER",  "vehicleSize": "Sprinter",   "insuranceMinimum": 250000 },
+          { "equipmentType": "STRAIGHT_TRUCK", "vehicleSize": "26ft straight", "insuranceMinimum": 250000 }
+        ]
+      },
+      "serviceTypes": ["EXPEDITE_SOLO", "EXPEDITE_TEAM", "EXPEDITE_EXCLUSIVE"],
+      "pricingRequest": { "currency": "USD", "requestedBy": "customer", "fuelIncluded": false },
+      "customerRules": { "premiumPricing": true, "competitionCount": 4, "appointmentsRequired": false },
+      "language": "en",
+      "rawExtraction": { "overallConfidence": 0.93, "needsHumanReview": false, "hitlReason": "none" },
+      "status": "QUOTING",
+      "createdAt": "2026-06-03T03:11:45Z"
+    }
+  ]
+}

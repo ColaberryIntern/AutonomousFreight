@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://colaberry.ai/schemas/dat-rfq-payload/v1.json",
+  "title": "Canonical RFQ Payload (DAT-compatible) v1",
+  "description": "Plural-by-default RFQ payload used as the canonical entity for the ShipCES Autonomous Brokerage. The DAT adapter flattens this to DAT's single-origin/single-destination shape on the way out; the canonical form supports multi-stop, multi-commodity, multi-service-type, and multi-channel intake. Source of truth for all internal services (Quoting Agent, Sourcing Agent, Pricing Engine).",
+  "type": "object",
+  "required": ["rfqId", "source", "customer", "shipment", "status", "createdAt"],
+  "properties": {
+    "rfqId": {
+      "type": "string",
+      "pattern": "^rfq_[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID-prefixed RFQ id. Generated server-side at ingestion. Example: rfq_01JV9QX3G7V8YQK9C7F0H1J2K3."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version pinned by every producer. Bump on breaking change."
+    },
+    "source": {
+      "type": "object",
+      "required": ["channel", "receivedAt"],
+      "description": "Provenance of this RFQ. Source-aware routing depends on this block.",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "enum": ["email", "whatsapp", "api_superprocure", "telegram", "sms", "manual", "api_other"],
+          "description": "Inbound channel. Required. Per the May 27-28 thread (Sai + Ram), Telegram and SMS are first-class channels alongside email and WhatsApp."
+        },
+        "messageId": {
+          "type": "string",
+          "description": "Channel-specific id (gmail thread id, WhatsApp message id, Telegram update id, SuperProcure event id). Used for idempotency on retries."
+        },
+        "receivedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when the inbound message landed in our system."
+        },
+        "rawRef": {
+          "type": "string",
+          "description": "Pointer (s3:// url or internal blob id) to the raw inbound artifact. Required for any RFQ extracted by an LLM; optional for manual-entry RFQs."
+        }
+      },
+      "additionalProperties": false
+    },
+    "customer": {
+      "type": "object",
+      "required": ["customerId", "companyName"],
+      "properties": {
+        "customerId":  { "type": "string", "description": "Internal CRM id. Required even if we only know the company name; resolver upserts to placeholder cust_unknown_<ulid> on first contact." },
+        "companyName": { "type": "string" },
+        "contacts": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Plural-by-default. At least one contact required.",
+          "items": {
+            "type": "object",
+            "required": ["role", "name"],
+            "properties": {
+              "role":  { "type": "string", "enum": ["primary", "dispatcher", "ap", "ops", "shipper", "consignee", "other"] },
+              "name":  { "type": "string" },
+              "email": { "type": "string", "format": "email" },
+              "phone": { "type": "string", "description": "E.164 preferred." }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "shipment": {
+      "type": "object",
+      "required": ["mode", "stops", "commodities", "equipmentOptions"],
+      "description": "Stops are plural and ordered by sequence. Pickup-delivery-pickup-delivery (milk run) is allowed. The DAT adapter flattens stops[0] -> origin, stops[-1] -> destination at posting time.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["FTL", "LTL", "ELTL", "PARTIAL", "EXPEDITE_SOLO", "EXPEDITE_TEAM", "EXPEDITE_EXCLUSIVE", "INTERMODAL"],
+          "description": "Service mode. Maps to Karun's D5 multi-service-type pattern; a single RFQ may also enumerate multiple eligible serviceTypes for multi-option quoting (see top-level field)."
+        },
+        "stops": {
+          "type": "array",
+          "minItems": 2,
+          "description": "Ordered list of stops. First stop must be pickup; last stop must be delivery. Intermediate stops allowed for multi-stop / milk run.",
+          "items": {
+            "type": "object",
+            "required": ["sequence", "stopType", "location"],
+            "properties": {
+              "sequence": { "type": "integer", "minimum": 1, "description": "1-based ordinal of this stop within the route." },
+              "stopType": { "type": "string", "enum": ["pickup", "delivery"] },
+              "location": {
+                "type": "object",
+                "required": ["country"],
+                "properties": {
+                  "facilityName": { "type": "string" },
+                  "addressLine1": { "type": "string" },
+                  "addressLine2": { "type": "string" },
+                  "city":         { "type": "string" },
+                  "state":        { "type": "string", "description": "2-letter US/MX code; ISO 3166-2 for others." },
+                  "postalCode":   { "type": "string" },
+                  "country":      { "type": "string", "description": "ISO 3166-1 alpha-2. US / MX / CA." },
+                  "geo":          { "type": "object", "properties": { "lat": {"type":"number"}, "lng":{"type":"number"} }, "additionalProperties": false }
+                },
+                "additionalProperties": false
+              },
+              "timing": {
+                "type": "object",
+                "description": "Plural-by-default: a single stop may have multiple acceptable windows.",
+                "properties": {
+                  "appointmentRequired": { "type": "boolean" },
+                  "windows": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["date"],
+                      "properties": {
+                        "date":     { "type": "string", "format": "date" },
+                        "timeStart":{ "type": "string", "description": "HH:MM, 24h." },
+                        "timeEnd":  { "type": "string", "description": "HH:MM, 24h." },
+                        "timezone": { "type": "string", "description": "IANA tz, e.g. America/Chicago." },
+                        "sentiment": { "type": "string", "enum": ["asap", "direct", "ready_at", "deliver_by", "window", "tbd"], "description": "Karun's V2 timing_window.sentiment_quote vocabulary." }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "instructions":  { "type": "string", "description": "Free-text per-stop instructions (gate code, liftgate, dock height)." },
+              "stopContacts": {
+                "type": "array",
+                "items": { "$ref": "#/properties/customer/properties/contacts/items" }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "commodities": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Plural-by-default. A shipment may contain multiple commodities (different SKUs, mixed pallets).",
+          "items": {
+            "type": "object",
+            "required": ["description", "weightLb"],
+            "properties": {
+              "description":  { "type": "string" },
+              "weightLb":     { "type": "number", "minimum": 0 },
+              "palletCount":  { "type": "integer", "minimum": 0 },
+              "pieces":       { "type": "integer", "minimum": 0 },
+              "dimensions":   { "type": "object", "properties": { "lengthIn": {"type":"number"}, "widthIn":{"type":"number"}, "heightIn":{"type":"number"} }, "additionalProperties": false },
+              "stackable":    { "type": "boolean" },
+              "hazmat": {
+                "type": "object",
+                "properties": {
+                  "isHazmat":  { "type": "boolean" },
+                  "unNumber":  { "type": "string" },
+                  "class":     { "type": "string" },
+                  "packingGroup": { "type": "string" }
+                },
+                "additionalProperties": false
+              },
+              "temperatureControl": {
+                "type": "object",
+                "properties": {
+                  "required": { "type": "boolean" },
+                  "minF":     { "type": "number" },
+                  "maxF":     { "type": "number" }
+                },
+                "additionalProperties": false
+              },
+              "highValue":    { "type": "boolean" },
+              "originStopSequence":      { "type": "integer", "description": "Which stops[].sequence this commodity is picked up at. Required when commodities are picked up at different stops." },
+              "destinationStopSequence": { "type": "integer", "description": "Which stops[].sequence this commodity is delivered at." }
+            },
+            "additionalProperties": false
+          }
+        },
+        "equipmentOptions": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Acceptable equipment types in order of preference. Plural because customers often accept multiple options (e.g. Cargo Van OR Sprinter for an expedite).",
+          "items": {
+            "type": "object",
+            "required": ["equipmentType"],
+            "properties": {
+              "equipmentType": { "type": "string", "enum": ["VAN", "REEFER", "FLATBED", "CARGO_VAN", "SPRINTER", "CUBE_VAN", "STRAIGHT_TRUCK", "INTERMODAL", "OTHER"] },
+              "vehicleSize":   { "type": "string", "description": "Bilingual-aware free-text label, e.g. '53 dry van' / 'Rabon' / '24ft'. Maps via Karun's fleet_config_mx.py aliases." },
+              "specialRequirements": {
+                "type": "array",
+                "items": { "type": "string", "enum": ["TEAM_DRIVER", "LIFTGATE", "TWIC", "TSA", "FAST", "HAZMAT", "BLOCKING_BRACING", "INSIDE_DELIVERY", "TARP", "ESCORT"] }
+              },
+              "insuranceMinimum": { "type": "number", "description": "Required insurance floor in the request currency." }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "serviceTypes": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Karun D5 multi-service-type pattern. Lists each Service Type the request could legally be quoted as. The Quoting Agent emits one quoteOption per item here (Brett Pair A/B/C pattern, slides 11-14).",
+      "items": {
+        "type": "string",
+        "enum": ["FTL", "LTL", "ELTL", "PARTIAL", "EXPEDITE_SOLO", "EXPEDITE_TEAM", "EXPEDITE_EXCLUSIVE"]
+      }
+    },
+    "pricingRequest": {
+      "type": "object",
+      "properties": {
+        "currency":     { "type": "string", "default": "USD", "description": "ISO 4217." },
+        "targetRate":   { "type": "number", "description": "Customer-supplied target (if present). Optional." },
+        "fuelIncluded": { "type": "boolean" },
+        "marginFloorOverride": { "type": "number", "description": "Per-RFQ floor override. Requires admin role; otherwise ignored and audited." },
+        "requestedBy":  { "type": "string", "enum": ["customer", "broker", "internal_automation"] }
+      },
+      "additionalProperties": false
+    },
+    "customerRules": {
+      "type": "object",
+      "description": "Per-RFQ overlay on the customer's persistent CustomerRule profile. Empty object means inherit from CRM.",
+      "properties": {
+        "isBoardEmail":      { "type": "boolean" },
+        "kpiDriven":         { "type": "boolean" },
+        "fuelSurchargeConfig": { "type": "object", "properties": { "model": {"type":"string","enum":["FLAT","PERCENT","INDEX_LINKED"]}, "value": {"type":"number"} }, "additionalProperties": false },
+        "appointmentsRequired": { "type": "boolean" },
+        "premiumPricing":    { "type": "boolean" },
+        "competitionCount":  { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "language": { "type": "string", "enum": ["en", "es"], "description": "Detected language of the original RFQ. Reply composer matches inbound language." },
+    "rawExtraction": {
+      "type": "object",
+      "description": "Per-field confidence and provenance. Allows downstream agents to gate on confidence without re-parsing.",
+      "properties": {
+        "overallConfidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "fieldConfidence":   { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } },
+        "needsHumanReview":  { "type": "boolean" },
+        "hitlReason":        { "type": "string", "enum": ["classification", "signal", "extraction", "validation", "none"] }
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "string",
+      "enum": ["NEW", "VALIDATING", "AWAITING_HUMAN", "QUOTING", "QUOTED", "AWARDED", "CONVERTED", "DECLINED", "EXPIRED", "EXCEPTION"],
+      "description": "RFQ lifecycle state. CONVERTED added per audit finding (was missing in Karun's Quote.Status enum)."
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}
