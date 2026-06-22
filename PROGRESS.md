@@ -337,6 +337,24 @@ This file is read by Claude at the start of every session to maintain context co
 
 ---
 
+## Operational Tooling
+
+### Daily scrum report (ShipCES Autonomous Brokerage)
+- [x] Automated daily stand-up email + 7:55am M-F cron
+  - Date: 2026-06-22
+  - What changed: Added `scripts/shipces-daily-scrum/` (dailyScrum.js generator+sender, shipces-scrum.cron, README). Pulls live Basecamp data for project 47126345 (token resolved from CCPP `Basecamp_AuthInfo`, since the container's env token is stale), renders an HTML report (milestone anchors, birds-eye layers, upcoming-14-day Gantt, per-list breakdown with open/done/overdue counts, conditional color), and sends via Mandrill to ali cc karun/ram/saitejesh. Installed on the VPS at `/etc/cron.d/shipces-scrum` (CRON_TZ=America/Chicago, `55 7 * * 1-5`), running inside the accelerator-backend container.
+  - Verification: test sends confirmed live data populated (Mandrill ids cac9397e, 3f8506b5); cc'd manual send 43de4fd9; `/etc/cron.d/shipces-scrum` installed with LF endings (cat -A) and cron service active. First scheduled run 2026-06-23.
+  - Notes: Cloud `/schedule` routine was rejected (cloud routines lack the Basecamp MCP and cannot send; Gmail MCP is draft-only), so a VPS cron was used. The cron executes in the accelerator-backend container (a separate deployment); this repo holds the canonical source.
+
+### Basecamp ticket name correction
+- [x] Renamed ShipCES tickets containing "Brent"/"Brett" to "Bret"
+  - Date: 2026-06-22
+  - What changed: Renamed 2 todo titles (10011526366, 10011535692) in project 47126345 via the Basecamp API (title only; description, due date, assignees preserved).
+  - Verification: post-change rescan returned 0 remaining matches. Addresses Ram's correction (todo 10012146458).
+  - Notes: Correct name is "Bret" (single t). OMS/BMS design-doc PDFs corrected separately.
+
+---
+
 ## Current State
 
 - **Agents**: 12 (Quoting, Procurement, Tracking, Document, Rate Audit, Invoice, Payment Match, Settlement, Dispute, Health Monitor, Capacity Shortage, Admin Activity)
