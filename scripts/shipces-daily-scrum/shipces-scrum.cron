@@ -3,4 +3,4 @@
 # Install on the VPS as: /etc/cron.d/shipces-scrum  (root:root, mode 644, LF line endings)
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 CRON_TZ=America/Chicago
-55 7 * * 1-5 root cd /opt/colaberry-accelerator && docker compose -f docker-compose.production.yml cp /opt/colaberry-accelerator/cron/dailyScrum.js backend:/app/dailyScrum.js >/dev/null 2>&1 && docker compose -f docker-compose.production.yml exec -T -w /app backend node /app/dailyScrum.js >> /var/log/shipces-scrum.log 2>&1
+55 7 * * 1-5 root cd /opt/colaberry-accelerator && docker compose -f docker-compose.production.yml cp /opt/colaberry-accelerator/cron/dailyScrum.js backend:/app/dailyScrum.js >/dev/null 2>&1 && docker compose -f docker-compose.production.yml cp /opt/colaberry-accelerator/cron/deliverables.js backend:/app/deliverables.js >/dev/null 2>&1 && docker compose -f docker-compose.production.yml exec -T -w /app backend node /app/dailyScrum.js >> /var/log/shipces-scrum.log 2>&1

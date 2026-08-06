@@ -1,0 +1,77 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ShipCES overnight brief</title>
+<style>
+  :root{--navy:#1a365d;--blue:#2b6cb0;--green:#38a169;--amber:#dd6b20;--red:#e53e3e;--slate:#4a5568;--gray:#718096;--border:#e2e8f0;--bgalt:#f7fafc;}
+  *{box-sizing:border-box;}
+  body{margin:0;padding:24px 0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#2d3748;line-height:1.5;}
+  .wrap{max-width:960px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.08);}
+  header{background:var(--navy);color:#fff;padding:24px 28px;}
+  header .eyebrow{color:#9ec5e8;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:700;}
+  header h1{margin:6px 0 0;font-size:24px;font-weight:800;}
+  header .sub{color:#cbd9e8;font-size:13px;margin-top:6px;}
+  .pad{padding:22px 28px;}
+  h2{font-size:16px;font-weight:800;color:var(--navy);margin:22px 0 8px;border-top:1px solid var(--border);padding-top:18px;}
+  h2:first-child{border-top:none;padding-top:0;margin-top:0;}
+  .muted{color:var(--gray);font-size:12.5px;margin:2px 0 12px;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--navy);color:#fff;font-weight:700;font-size:11.5px;}
+  tr:nth-child(even) td{background:var(--bgalt);}
+  .pill{display:inline-block;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9px;white-space:nowrap;}
+  .done{background:var(--green);} .built{background:var(--blue);} .staged{background:var(--amber);} .blocked{background:var(--red);}
+  .mono{font-family:Consolas,Menlo,monospace;font-size:11.5px;color:var(--slate);}
+  .kpis{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+  .kpi{flex:1;min-width:150px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+  .kpi .n{font-size:18px;font-weight:800;color:var(--navy);} .kpi .l{font-size:11px;color:var(--gray);}
+  .card{border:1px solid var(--border);border-left:5px solid var(--blue);border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#fff;}
+  .card.green{border-left-color:var(--green);} .card.amber{border-left-color:var(--amber);} .card.red{border-left-color:var(--red);}
+  ol{margin:6px 0;padding-left:20px;} li{margin:4px 0;font-size:13px;}
+  code{font-family:Consolas,Menlo,monospace;background:var(--bgalt);padding:1px 5px;border-radius:4px;font-size:11.5px;}
+  .foot{border-top:1px solid var(--border);padding:14px 28px 22px;font-size:11px;color:var(--gray);}
+</style></head>
+<body><div class="wrap">
+<header><div class="eyebrow">ShipCES Autonomous Brokerage</div><h1>Demo prep brief: Wed Jul 15 (demo tomorrow, Thu Jul 16 10:00 CST)</h1>
+<div class="sub">Loop Architect framework (Loop Spec, maker/checker, hard stops). Built and drafted everything; on your go I also deployed the report and posted the Gate-1 package. The two client emails to Brett are still staged for you.</div></header>
+<div class="pad">
+
+<div class="kpis">
+  <div class="kpi"><div class="n">tsc -b: exit 0</div><div class="l">monorepo typecheck green</div></div>
+  <div class="kpi"><div class="n">jest unit: exit 0</div><div class="l">full unit suite green</div></div>
+  <div class="kpi"><div class="n">em/en-dash: 0</div><div class="l">across all output + source</div></div>
+  <div class="kpi"><div class="n">verifier: PASS</div><div class="l">independent maker/checker</div></div>
+</div>
+
+<h2>Your remaining actions (items 5 and 6 already executed on your go)</h2>
+<div class="muted">Everything below is prepared to one action. Ordered by what de-risks tomorrow most.</div>
+<div class="card green"><b>1. Open the five demo artifacts</b> in <code>docs/demo-artifacts/</code> (also copied to your Downloads). Confirm they look right for the call: invoice, BMS demo, RFQ card, storyboard, architecture.</div>
+<div class="card"><b>2. Record the 60-second forward clip</b> by screen-recording straight down <code>ShipCES-Forward-Storyboard.html</code> (or run the live demo: <code>npx ts-node --transpile-only scripts/shipces-demo/forwardTrackDemo.ts</code>).</div>
+<div class="card"><b>3. Send the two held emails</b> after review: <code>docs/drafts/brett-dat-api-press.md</code> and <code>docs/drafts/brett-invoice-anatomy-questionnaire.md</code>. The invoice-anatomy one is what unblocks BMS past fake data.</div>
+<div class="card"><b>4. Send the demo agenda</b> to Brett: <code>docs/jul16-demo-agenda.md</code>.</div>
+<div class="card green"><b>5. DONE on your go: Gate-1 package posted to Karun</b> on BC 10081574109 (comment 10099517830). Ticket left open for his sign-off.</div>
+<div class="card green"><b>6. DONE on your go: report deployed and cron repaired.</b> The cron was actually broken (its dir was wiped Jul 12 and the container had no report files, so it had stopped sending). Rebuilt it, updated the cron to copy both files, and validated with a --test send to you. The new deliverable-anchored report sends Thu Jul 16 at 7:55am CT to karun/ram/saitejesh.</div>
+
+<h2>The 10 steps, mapped to what got done</h2>
+<table>
+  <tr><th style="width:26px;">#</th><th>Step</th><th style="width:78px;">State</th><th>Artifact / next action</th></tr>
+  <tr><td>1</td><td>Render flagship invoice AF-INV-0001</td><td><span class="pill done">DONE</span></td><td><span class="mono">docs/demo-artifacts/ShipCES-Invoice-AF-INV-0001.html</span> ($2,982, real code, verified)</td></tr>
+  <tr><td>2</td><td>BMS demo screen (fail-closed)</td><td><span class="pill done">DONE</span></td><td><span class="mono">ShipCES-BMS-Demo.html</span> (Delivered to invoice + real no-linehaul refusal)</td></tr>
+  <tr><td>3</td><td>Email to RFQ clip + RFQ card</td><td><span class="pill built">BUILT</span></td><td><span class="mono">ShipCES-RFQ-Card.html</span> + <span class="mono">ShipCES-Forward-Storyboard.html</span>. You record the clip (2 min).</td></tr>
+  <tr><td>4</td><td>Deploy redesigned daily report</td><td><span class="pill done">DONE</span></td><td>Deployed + cron repaired; validated with a --test send. New report sends Thu 7:55am CT.</td></tr>
+  <tr><td>5</td><td>One-page Jul 16 demo agenda</td><td><span class="pill done">DONE</span></td><td><span class="mono">docs/jul16-demo-agenda.md</span>. Send held.</td></tr>
+  <tr><td>6</td><td>Karun Gate-1 design review</td><td><span class="pill done">POSTED</span></td><td>Package posted to Karun (BC comment 10099517830). Ticket open.</td></tr>
+  <tr><td>7</td><td>Press Brett for DAT API (via Jen)</td><td><span class="pill built">DRAFT</span></td><td><span class="mono">docs/drafts/brett-dat-api-press.md</span>. Send held.</td></tr>
+  <tr><td>8</td><td>Brett invoice-anatomy walkthrough</td><td><span class="pill built">DRAFT</span></td><td><span class="mono">docs/drafts/brett-invoice-anatomy-questionnaire.md</span> (8 questions). Send held.</td></tr>
+  <tr><td>9</td><td>Refresh C4 + agent-map, ingest PMBOK PDF</td><td><span class="pill built">DIAGRAMS</span></td><td><span class="mono">docs/diagrams/</span> + <span class="mono">ShipCES-Architecture.html</span> done. PMBOK PDF ingest still needs the PDF from Brett.</td></tr>
+  <tr><td>10</td><td>Backlog reconcile vs Releases R0-R6</td><td><span class="pill staged">PARTIAL</span></td><td>Two findings below. Live per-list sweep is a container task.</td></tr>
+</table>
+
+<h2>Two backlog findings (one-line fixes to dailyScrum.js)</h2>
+<div class="card amber"><b>Finding A: the Releases R0-R6 list is invisible on the report.</b> The new "Releases + Demo Schedule (R0 to R6)" list (id 10095533315) is live but not in the daily scrum <code>LISTS</code> array, so its tickets never appear. Add it to <code>LISTS</code>.</div>
+<div class="card red"><b>Finding B: the report references a dead Phase C list.</b> <code>LISTS</code> includes Phase C id 9850502673, which is no longer in the live list set; that row will render NO DATA at run time. Repoint or drop it.</div>
+<div class="muted">To get the reconciled live backlog view, apply A and B, then run <code>docker compose -f docker-compose.production.yml exec -T -w /app backend node /app/dailyScrum.js --test</code> (sends to you only).</div>
+
+<h2>Independent verifier result</h2>
+<div class="muted">A separate agent (which did not build the artifacts) re-ran the demo, cross-checked every value, diagrams against code, and test counts. Verdict: PASS. Its one concern (an em/en-dash living inside the builder's own dash-detection regex) has been fixed; a fresh sweep across all source and docs is now 0.</div>
+
+</div>
+<div class="foot">On your go, the report was deployed and the Gate-1 package posted to Karun. Still held for you: the two client emails to Brett (cc Jen). No gated-ticket closure. Generated 2026-07-15 (demo Thu Jul 16). No em-dashes or en-dashes.</div>
+</div></body></html>

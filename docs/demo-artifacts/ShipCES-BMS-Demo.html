@@ -1,0 +1,70 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>BMS billing on fake data</title>
+<style>
+  :root{--navy:#1a365d;--blue:#2b6cb0;--green:#38a169;--amber:#dd6b20;--red:#e53e3e;--slate:#4a5568;--gray:#718096;--border:#e2e8f0;--bgalt:#f7fafc;}
+  *{box-sizing:border-box;}
+  body{margin:0;padding:24px 0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#2d3748;line-height:1.5;}
+  .wrap{max-width:860px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.08);}
+  header{background:var(--navy);color:#fff;padding:24px 28px;}
+  header .eyebrow{color:#9ec5e8;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:700;}
+  header h1{margin:6px 0 0;font-size:24px;font-weight:800;}
+  header .sub{color:#cbd9e8;font-size:13px;margin-top:6px;}
+  .pad{padding:22px 28px;}
+  .card{border:1px solid var(--border);border-radius:10px;background:#fff;padding:16px 18px;margin-bottom:16px;}
+  .card.blue{border-left:5px solid var(--blue);} .card.green{border-left:5px solid var(--green);}
+  .card.amber{border-left:5px solid var(--amber);} .card.red{border-left:5px solid var(--red);} .card.navy{border-left:5px solid var(--navy);}
+  h2{font-size:16px;font-weight:800;color:var(--navy);margin:0 0 4px;}
+  h3{font-size:13px;font-weight:800;color:var(--navy);margin:0 0 8px;text-transform:uppercase;letter-spacing:.5px;}
+  .muted{color:var(--gray);font-size:12px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--navy);color:#fff;font-weight:700;font-size:12px;}
+  tr:nth-child(even) td{background:var(--bgalt);}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;font-size:13px;}
+  .kv .k{color:var(--gray);font-weight:600;}
+  .kv .v{color:var(--navy);font-weight:600;}
+  .chip{display:inline-block;background:#ebf3fb;color:var(--blue);border:1px solid #cfe0f2;border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:700;margin:2px 4px 2px 0;}
+  .chip.lead{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .pill{display:inline-block;color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:9px;}
+  .total td{font-weight:800;color:var(--navy);font-size:15px;background:#fff;border-top:2px solid var(--navy);}
+  .frames{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .frame{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;}
+  .frame .fh{background:var(--navy);color:#fff;font-size:12px;font-weight:700;padding:7px 12px;}
+  .frame .fb{padding:12px 14px;font-size:12.5px;}
+  .mono{font-family:Consolas,Menlo,monospace;font-size:12px;color:var(--slate);}
+  .foot{border-top:1px solid var(--border);padding:14px 28px 22px;font-size:11px;color:var(--gray);}
+  @media print{body{background:#fff;padding:0;}.wrap{box-shadow:none;border-radius:0;max-width:none;}.noprint{display:none;}}
+  @media(max-width:640px){.frames{grid-template-columns:1fr;}.kv{grid-template-columns:1fr;}}
+</style></head>
+<body><div class="wrap">
+<header><div class="eyebrow">ShipCES Autonomous Brokerage</div><h1>BMS billing on fake data</h1><div class="sub">Jul 16 backward-track demo: Delivered to invoice AF-INV-0001, and the guardrail that refuses a bad bill.</div></header>
+<div class="pad">
+    <div class="card blue">
+      <h3>Demo script (given / when / then)</h3>
+      <div style="font-size:13px;color:#4a5568;"><b style="color:#1a365d;">Given</b> a delivered shipment with a POD; <b style="color:#1a365d;">When</b> BMS runs on fake data; <b style="color:#1a365d;">Then</b> invoice AF-INV-0001 is produced ($2,400 linehaul + 18% fuel + $150 detention = $2,982); <b style="color:#1a365d;">And</b> with no linehaul it refuses to issue.</div>
+    </div>
+    <div class="card navy"><h2>Step 1. TMS hands BMS a Bill-Ready record at DELIVERED</h2><div class="kv">
+    <div class="k">Bill-Ready ref</div><div class="v mono">BR-99ZRQ5S65X</div>
+    <div class="k">Shipment</div><div class="v mono">shp_99ZRQ5S65XKESCKP155H3TDB3M</div>
+    <div class="k">Load reference</div><div class="v mono">AF-99ZRQ5S6</div>
+    <div class="k">Customer</div><div class="v mono">cust_5ET652F76BR77X323SE5M8270K</div>
+    <div class="k">POD reference</div><div class="v mono">POD-DEMO-0725</div>
+    <div class="k">Final weight</div><div class="v">3,200 lb</div>
+    <div class="k">Sell rate (linehaul)</div><div class="v">$2,400</div>
+    <div class="k">Accessorials</div><div class="v">Detention (2 hr) $150</div>
+  </div></div>
+    <div class="card green"><h2>Step 2. BMS bills it: invoice AF-INV-0001 (EDI 210)</h2>
+      <table>
+        <tr><th style="width:80px;">Code</th><th>Description</th><th class="num" style="width:130px;">Amount</th></tr>
+        <tr><td class="mono">400</td><td>Linehaul</td><td class="num">$2,400</td></tr><tr><td class="mono">FUE</td><td>Fuel surcharge (18%)</td><td class="num">$432</td></tr><tr><td class="mono">ACC</td><td>Detention (2 hr)</td><td class="num">$150</td></tr>
+        <tr class="total"><td></td><td>TOTAL</td><td class="num">$2,982</td></tr>
+      </table>
+    </div>
+    <div class="card red"><h2>Step 3. Fail-closed: no linehaul, no invoice</h2>
+      <p style="font-size:13px;color:#4a5568;margin:0 0 8px;">The same generator is called with a Bill-Ready record that has no sell rate and no linehaul override. It does not guess or issue a zero invoice. It refuses:</p>
+      <div class="mono" style="background:#fff5f5;border:1px solid #fed7d7;border-radius:8px;padding:10px 12px;color:#e53e3e;">Error: cannot invoice: no linehaul rate on Bill-Ready record or params</div>
+      <p class="muted" style="margin-top:8px;">Asserted in <span class="mono">tests/unit/bms/bms.test.ts</span> ("fails closed when no linehaul is available"). Protecting margin means never issuing a bill you cannot stand behind.</p>
+    </div>
+  </div>
+<div class="foot">Generated from the real services/* build by <span class="mono">scripts/shipces-demo/buildDemoArtifacts.ts</span> (deterministic, no clock or random). Every value is produced by the same code path as the forward-track demo and pinned by the unit + chain tests. No em-dashes or en-dashes.</div>
+</div></body></html>

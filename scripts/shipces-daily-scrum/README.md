@@ -9,9 +9,27 @@ the build layers, milestone anchors, and conditional color (on time vs late).
 ## Files
 
 - `dailyScrum.js` - the generator + sender. Pulls live Basecamp data, renders the
-  HTML email, and sends via Mandrill. Self-contained (only `mssql` + `nodemailer`,
-  both already in the backend image; `https` is built in).
+  HTML email, and sends via Mandrill. Requires `./deliverables.js`. Deps are only
+  `nodemailer` + `mssql` (both in the backend image; `mssql` is lazy-required so
+  `--preview` runs on a machine without it); `https`/`fs`/`path` are built in.
+- `deliverables.js` - the deliverable model (the PM spine): one verifiable
+  deliverable + acceptance criterion + value + dependencies + state per work
+  stream, plus the pure HTML render helpers. Shared by the email and the Gantt so
+  the two never drift. **Must be deployed alongside `dailyScrum.js`.**
+- `buildGantt.js` - standalone delivery-Gantt generator (dependency icons on the
+  bars, one deliverable + acceptance per bar). Run locally; not part of the cron.
 - `shipces-scrum.cron` - the cron definition installed at `/etc/cron.d/shipces-scrum`.
+
+## The report shape (PMBOK + Story-Driven Build)
+
+The email is a PMBOK 8th-edition **work-performance report**. Each of the 9 work
+streams is a **deliverable** with an **acceptance criterion** and a state on the
+verify-to-accept chain (Verified = tests + tsc green, pending sign-off; Accepted =
+client signed off). The birds-eye is the value chain
+`Sense -> RMS -> OMS -> TMS -> BMS` with an hourglass on any bar that has an
+upstream dependency (a bar cannot land until the one before it does). This
+matches Brett's Jul 9 ask: one tangible deliverable per stream + dependency icons
+on the bars, doubling as the Thursday demo agenda and his sign-off.
 
 ## How it runs
 
@@ -48,12 +66,25 @@ docker compose -f docker-compose.production.yml exec -T -w /app backend node /ap
 docker compose -f docker-compose.production.yml exec -T -w /app backend node /app/dailyScrum.js
 ```
 
-## Redeploy after editing dailyScrum.js
+## Preview locally (no network, no send)
 
 ```sh
-scp scripts/shipces-daily-scrum/dailyScrum.js root@95.216.199.47:/tmp/dailyScrum.js
-ssh root@95.216.199.47 "cp /tmp/dailyScrum.js /opt/colaberry-accelerator/cron/dailyScrum.js"
-# the cron re-copies the host file into the container on each run, so no container rebuild is needed
+node scripts/shipces-daily-scrum/dailyScrum.js --preview   # -> ~/Downloads/ShipCES-Delivery-Report-preview.html
+node scripts/shipces-daily-scrum/buildGantt.js             # -> ~/Downloads/ShipCES-Delivery-Gantt-v2.html
+```
+
+Preview uses a labeled sample snapshot for ticket counts; deliverables,
+acceptance criteria, states and dependencies are real.
+
+## Redeploy after editing
+
+`dailyScrum.js` now requires `deliverables.js`, so **copy both** or the cron run
+will crash on `require('./deliverables')`.
+
+```sh
+scp scripts/shipces-daily-scrum/dailyScrum.js scripts/shipces-daily-scrum/deliverables.js root@95.216.199.47:/tmp/
+ssh root@95.216.199.47 "cp /tmp/dailyScrum.js /tmp/deliverables.js /opt/colaberry-accelerator/cron/"
+# the cron re-copies the host files into the container on each run, so no container rebuild is needed
 ```
 
 Logs: `/var/log/shipces-scrum.log` on the VPS.

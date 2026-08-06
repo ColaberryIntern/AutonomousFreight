@@ -1,0 +1,6 @@
+{
+  "name": "@af/rms",
+  "version": "0.0.0",
+  "private": true,
+  "description": "RMS — Request Management System. Email + RFQ intake (W1 forward track). Ingestion pipeline + D1-D33 parser + canonical RFQ contract."
+}

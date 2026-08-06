@@ -1,0 +1,6 @@
+{
+  "name": "@af/bms",
+  "version": "0.0.0",
+  "private": true,
+  "description": "BMS — Billing Management System. POD ingest → invoice generation (EDI 210) → accounting handoff. Brett backward track."
+}
