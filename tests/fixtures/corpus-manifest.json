@@ -1,0 +1,472 @@
+{
+  "source": {
+    "repo": "karunswaroop/ShipCES_EmailParsing",
+    "note": "read-only reuse; payload deliberately not committed"
+  },
+  "fetchedFrom": "HEAD",
+  "counts": {
+    "total": 35,
+    "real": 17,
+    "scenario": 18,
+    "labeled": 17
+  },
+  "files": [
+    {
+      "localFile": "real__1_FTL____LAREDO_-_LAREDO____10_PALLETS.eml",
+      "upstreamPath": "emails/1 FTL __ LAREDO - LAREDO __ 10 PALLETS.eml",
+      "sha256": "cd20b6a3d3c988fe83f9640dbfe5f41d29d33312c19dc0266cf434871bbd0623",
+      "bytes": 74173,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__10_HOT_SHOT_.eml",
+      "upstreamPath": "emails/10 HOT SHOT .eml",
+      "sha256": "148c070bc34967fe99d55f65df165c23f3bb5821f4575ab6f541340b97857f68",
+      "bytes": 708043,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__11_FTL____LAREDO-_LONDON____16_PALLETS.eml",
+      "upstreamPath": "emails/11 FTL __ LAREDO- LONDON __ 16 PALLETS.eml",
+      "sha256": "fc37b7b054c8d8b339f38811116f9d044949345358d02423448db2cf80105ce0",
+      "bytes": 90013,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__12_HOT_SHOT_-_Dock_High_(1).eml",
+      "upstreamPath": "emails/12 HOT SHOT - Dock High (1).eml",
+      "sha256": "898e4ec7a553eb450d79de1459ea95a299f67f8338d2899c3eeb305ba3d25054",
+      "bytes": 2254,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__13_FREYSSINET____IMPORTACION_ATLANTA_-_MONTERREY_TIJUANA.eml",
+      "upstreamPath": "emails/13 FREYSSINET __ IMPORTACION ATLANTA - MONTERREY_TIJUANA.eml",
+      "sha256": "bf04e213d9e2ee195227a160e22c1fc33d87797b843ff2fb3774943ea2b91133",
+      "bytes": 32555,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__14_FREYSSINET____IMPORTACION_ATLANTA_-_MONTERREY_TIJUANA_(1).eml",
+      "upstreamPath": "emails/14 FREYSSINET __ IMPORTACION ATLANTA - MONTERREY_TIJUANA (1).eml",
+      "sha256": "3d0d2e989b2338824b98f4f19410115aa46dda3686d0fb3c1d15eaac2d740197",
+      "bytes": 2179,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__15_Laredo,_Tx_-_RALEIGH_NC.eml",
+      "upstreamPath": "emails/15 Laredo, Tx - RALEIGH NC.eml",
+      "sha256": "531acb2c46d44e5bf204caa61371dbd46fb3897e80b3a18bade3abe7efe5f6a2",
+      "bytes": 85984,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__16_Nueva_cotizacion_spot____Arizlu____Acatlan_-_Atlanta.eml",
+      "upstreamPath": "emails/16 Nueva cotizacion spot __ Arizlu __ Acatlan - Atlanta.eml",
+      "sha256": "66c5f2d38372eb0a1fe6a2b4e08282d71cc7234ca49b8e1fb92ee7553742fed7",
+      "bytes": 35525,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__17_ACS_QUOTE_REQUEST___PA-TX___XF2509L6N0_.eml",
+      "upstreamPath": "emails/17 ACS QUOTE REQUEST _ PA-TX _ XF2509L6N0 .eml",
+      "sha256": "21815762eea3f6e116b0120d701a305f11c01088cd4e0f1821ed775aaa3799f4",
+      "bytes": 59359,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__2_FTL____LAREDO_-_LAREDO____10_PALLETS_(2).eml",
+      "upstreamPath": "emails/2 FTL __ LAREDO - LAREDO __ 10 PALLETS (2).eml",
+      "sha256": "959b51b63b3bf29d20b94e043baee35e255385f9596b0a41712b7922570f8bc9",
+      "bytes": 56057,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__3_FTL____LAREDO-_LONDON.eml",
+      "upstreamPath": "emails/3 FTL __ LAREDO- LONDON.eml",
+      "sha256": "f07030c2be3ff5eef72fa18a85cca44796e3663742655e1c50bc2e241e9afdcd",
+      "bytes": 18276,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__4_FTL____LAREDO-_LONDON____SLEN024764.eml",
+      "upstreamPath": "emails/4 FTL __ LAREDO- LONDON __ SLEN024764.eml",
+      "sha256": "5c3219ae8c9b0187a1a2e97db6814b9f252f102a0d9afee20f1f97c3988a50a6",
+      "bytes": 20743,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__5_RFQ____Laredo,_TX_-_Shelby_Township_MI____Dedicado_QTVASA7573.eml",
+      "upstreamPath": "emails/5 RFQ __ Laredo, TX - Shelby Township MI __ Dedicado QTVASA7573.eml",
+      "sha256": "6bd5cc8d51e62c69f38b70f8b84190edf4da5cee6331daab144e7d15430c3911",
+      "bytes": 110671,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__6_FW__Gears_WS_to_Stellantis.eml",
+      "upstreamPath": "emails/6 FW_ Gears WS to Stellantis.eml",
+      "sha256": "29ebad9ee896707e5d1e67cf8cdd9eaffc884cf35c16b51ae0596188fa09eff1",
+      "bytes": 143063,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__7_VS20251692_RELEASE_AJ_NONWOVENS_1073699_701207.eml",
+      "upstreamPath": "emails/7 VS20251692 RELEASE AJ NONWOVENS 1073699 701207.eml",
+      "sha256": "28efe470e4bdc5d987a39f1b6cbabd1a197dc7371f4507d41bd9293a54f28167",
+      "bytes": 350879,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__8_RFQ_Sprinter___Straight_Truck_TEAM_Drivers_Holland_MI_to_Duncan_SC_10-4.eml",
+      "upstreamPath": "emails/8 RFQ Sprinter _ Straight Truck TEAM Drivers Holland MI to Duncan SC 10-4.eml",
+      "sha256": "557dbf06b6bf0ffb5370b1d0aaf8eea290b35e2a2dd506cc2a87a62d78dc5f29",
+      "bytes": 7108,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "real__9_CES_COTIZACIÓN_ZF_EL_SALTO_-_TRW_10.04.2025.eml",
+      "upstreamPath": "emails/9 CES   COTIZACIÓN ZF EL SALTO - TRW 10.04.2025.eml",
+      "sha256": "d7cc744a8611536712b3e28bd2299ab226f63e1c337a31e4e83552f207310075",
+      "bytes": 26337,
+      "kind": "real",
+      "scenarioId": null,
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "scenario__01_rfq_start_ready_en_single__01_initial.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/01_rfq_start_ready_en_single/01_initial.eml",
+      "sha256": "94076cfff19ac072159afff5ddadb3806ec0c4ef37bca2f78b9f629042cf71c7",
+      "bytes": 990,
+      "kind": "scenario",
+      "scenarioId": "01_rfq_start_ready_en_single",
+      "language": "en",
+      "tags": [
+        "happy_path",
+        "single",
+        "rfq_start"
+      ],
+      "expectedState": "ready_to_quote"
+    },
+    {
+      "localFile": "scenario__02_rfq_start_ready_es_single__01_initial.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/02_rfq_start_ready_es_single/01_initial.eml",
+      "sha256": "1c44bd31093c23f5b81f61152ea560dcf075243cc3beaf7818d8fe34eecf7ce5",
+      "bytes": 1135,
+      "kind": "scenario",
+      "scenarioId": "02_rfq_start_ready_es_single",
+      "language": "es",
+      "tags": [
+        "happy_path",
+        "single",
+        "rfq_start",
+        "spanish"
+      ],
+      "expectedState": "ready_to_quote"
+    },
+    {
+      "localFile": "scenario__03_missing_data_en__01_incomplete_rfq.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/03_missing_data_en/01_incomplete_rfq.eml",
+      "sha256": "b2485135c2997fdbd3b332442995ec8689ae7629b6c873eeb3e9c6eabfbebbf1",
+      "bytes": 533,
+      "kind": "scenario",
+      "scenarioId": "03_missing_data_en",
+      "language": "en",
+      "tags": [
+        "chain",
+        "missing_data"
+      ],
+      "expectedState": "sent_missing_data"
+    },
+    {
+      "localFile": "scenario__04_missing_data_loop_en__01_incomplete_rfq.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/04_missing_data_loop_en/01_incomplete_rfq.eml",
+      "sha256": "65f22ecd9145a6d99d6579b196fe534d136b225be6ec39cf20b350f53a09fe7a",
+      "bytes": 501,
+      "kind": "scenario",
+      "scenarioId": "04_missing_data_loop_en",
+      "language": "en",
+      "tags": [
+        "chain",
+        "missing_data",
+        "loop"
+      ],
+      "expectedState": "sent_missing_data"
+    },
+    {
+      "localFile": "scenario__04_missing_data_loop_en__02_customer_response.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/04_missing_data_loop_en/02_customer_response.eml",
+      "sha256": "8027ea61dcad65db66f4d272b740437076e7eb8f195b87929fd200eed9cbcd1f",
+      "bytes": 786,
+      "kind": "scenario",
+      "scenarioId": "04_missing_data_loop_en",
+      "language": "en",
+      "tags": [
+        "chain",
+        "missing_data",
+        "loop"
+      ],
+      "expectedState": "ready_to_quote"
+    },
+    {
+      "localFile": "scenario__05_awarded_happy_path_en__01_rfq.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/05_awarded_happy_path_en/01_rfq.eml",
+      "sha256": "f11ebb4ad59e7fe522b8744d91b189a213f5886b741ccd9c4318d66aca8d0a49",
+      "bytes": 1036,
+      "kind": "scenario",
+      "scenarioId": "05_awarded_happy_path_en",
+      "language": "en",
+      "tags": [
+        "happy_path",
+        "chain",
+        "awarded"
+      ],
+      "expectedState": "ready_to_quote"
+    },
+    {
+      "localFile": "scenario__05_awarded_happy_path_en__02_customer_approval.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/05_awarded_happy_path_en/02_customer_approval.eml",
+      "sha256": "d4dd14c5ce32a28b94605e4cfa108aa285a63146a7449dc571c8479529768998",
+      "bytes": 763,
+      "kind": "scenario",
+      "scenarioId": "05_awarded_happy_path_en",
+      "language": "en",
+      "tags": [
+        "happy_path",
+        "chain",
+        "awarded"
+      ],
+      "expectedState": "awarded"
+    },
+    {
+      "localFile": "scenario__06_awarded_happy_path_es__01_rfq.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/06_awarded_happy_path_es/01_rfq.eml",
+      "sha256": "e155480b3f6cf16529fc322bde6ca55c827f0f1ad9fc8fc8c6d4a039a657a23a",
+      "bytes": 1038,
+      "kind": "scenario",
+      "scenarioId": "06_awarded_happy_path_es",
+      "language": "es",
+      "tags": [
+        "happy_path",
+        "chain",
+        "awarded",
+        "spanish"
+      ],
+      "expectedState": "ready_to_quote"
+    },
+    {
+      "localFile": "scenario__06_awarded_happy_path_es__02_aprobacion.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/06_awarded_happy_path_es/02_aprobacion.eml",
+      "sha256": "72c4ba8b8eb98ccb418d3c94d5da8a929cae31dbb9cffe64c8ea8b21e45cfb94",
+      "bytes": 787,
+      "kind": "scenario",
+      "scenarioId": "06_awarded_happy_path_es",
+      "language": "es",
+      "tags": [
+        "happy_path",
+        "chain",
+        "awarded",
+        "spanish"
+      ],
+      "expectedState": "awarded"
+    },
+    {
+      "localFile": "scenario__07_lost_decline_en__01_rfq.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/07_lost_decline_en/01_rfq.eml",
+      "sha256": "1c7714a53157bd382d0dc83d5c7d23b124e355a5f400712f2c992ff3107123e7",
+      "bytes": 971,
+      "kind": "scenario",
+      "scenarioId": "07_lost_decline_en",
+      "language": "en",
+      "tags": [
+        "chain",
+        "lost",
+        "decline"
+      ],
+      "expectedState": "ready_to_quote"
+    },
+    {
+      "localFile": "scenario__07_lost_decline_en__02_decline.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/07_lost_decline_en/02_decline.eml",
+      "sha256": "ac2fb117e22bbbf64968405697f06737b31ef8940dfc6689504df3d4c77b931e",
+      "bytes": 712,
+      "kind": "scenario",
+      "scenarioId": "07_lost_decline_en",
+      "language": "en",
+      "tags": [
+        "chain",
+        "lost",
+        "decline"
+      ],
+      "expectedState": "lost"
+    },
+    {
+      "localFile": "scenario__08_client_responded_new_rfq_en__01_rfq.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/08_client_responded_new_rfq_en/01_rfq.eml",
+      "sha256": "1bade656948cca12b6ddd7172ace1e9d73a93b8db00fd11bddbeda6ea17d2e3c",
+      "bytes": 812,
+      "kind": "scenario",
+      "scenarioId": "08_client_responded_new_rfq_en",
+      "language": "en",
+      "tags": [
+        "chain",
+        "threading",
+        "client_responded"
+      ],
+      "expectedState": "ready_to_quote"
+    },
+    {
+      "localFile": "scenario__08_client_responded_new_rfq_en__02_different_lane_same_thread.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/08_client_responded_new_rfq_en/02_different_lane_same_thread.eml",
+      "sha256": "16b7d2187f042d3bebcd30cf05339d5fcf514324d2b90e0adf0ca478ed8645ba",
+      "bytes": 1004,
+      "kind": "scenario",
+      "scenarioId": "08_client_responded_new_rfq_en",
+      "language": "en",
+      "tags": [
+        "chain",
+        "threading",
+        "client_responded"
+      ],
+      "expectedState": "rfq_start"
+    },
+    {
+      "localFile": "scenario__09_board_email_en__01_board_rfq.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/09_board_email_en/01_board_rfq.eml",
+      "sha256": "feb3e425d6b6c24d207793cf3fd996fed02a3a5151e4397b453861451d8caedd",
+      "bytes": 920,
+      "kind": "scenario",
+      "scenarioId": "09_board_email_en",
+      "language": "en",
+      "tags": [
+        "single",
+        "board",
+        "orthogonal"
+      ],
+      "expectedState": "ready_to_quote"
+    },
+    {
+      "localFile": "scenario__10_bulk_rfq_es__01_multi_load.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/10_bulk_rfq_es/01_multi_load.eml",
+      "sha256": "4119933a66a5201390282cfadb017eda4c4daf4e291f22fffc4bcda88164d22c",
+      "bytes": 1819,
+      "kind": "scenario",
+      "scenarioId": "10_bulk_rfq_es",
+      "language": "es",
+      "tags": [
+        "single",
+        "bulk",
+        "spanish"
+      ],
+      "expectedState": "ready_to_quote"
+    },
+    {
+      "localFile": "scenario__11_lost_timer_en__01_rfq.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/11_lost_timer_en/01_rfq.eml",
+      "sha256": "cba531d75e05e7d673436440fc16345bd1f2dc5a74840abdfb9d8aeefc99080d",
+      "bytes": 889,
+      "kind": "scenario",
+      "scenarioId": "11_lost_timer_en",
+      "language": "en",
+      "tags": [
+        "manual",
+        "long_running",
+        "lost",
+        "timer"
+      ],
+      "expectedState": "lost"
+    },
+    {
+      "localFile": "scenario__12_on_hold_en__01_rfq.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/12_on_hold_en/01_rfq.eml",
+      "sha256": "2b0ae74adde722df5d2819a22e6b571eb29e57dc432465cf364b102c898ff2f7",
+      "bytes": 837,
+      "kind": "scenario",
+      "scenarioId": "12_on_hold_en",
+      "language": null,
+      "tags": [],
+      "expectedState": null
+    },
+    {
+      "localFile": "scenario__13_thread_reply_cotizacion_es__01_initial.eml",
+      "upstreamPath": "tests/fixtures/state_machine_emails/scenarios/13_thread_reply_cotizacion_es/01_initial.eml",
+      "sha256": "7c1cf1c7e78818b7055d8294b5b7a3bdaf8d44f57d12772c8d324be552b1d2d6",
+      "bytes": 1661,
+      "kind": "scenario",
+      "scenarioId": "13_thread_reply_cotizacion_es",
+      "language": "es",
+      "tags": [
+        "single",
+        "spanish",
+        "thread_reply",
+        "edge_case"
+      ],
+      "expectedState": "ready_to_quote"
+    }
+  ]
+}

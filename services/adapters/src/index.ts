@@ -11,3 +11,5 @@ export { MockEmailEngine } from './email/mockEmailEngine';
 export { GmailApiEmailEngine, mapGmailMessage } from './email/gmailApiEmailEngine';
 export { MsGraphEmailEngine, mapGraphMessage } from './email/msGraphEmailEngine';
 export { stripHtml } from './email/htmlText';
+export { parseEml } from './email/emlParser';
+export type { ParsedEml, EmlParseOptions } from './email/emlParser';
