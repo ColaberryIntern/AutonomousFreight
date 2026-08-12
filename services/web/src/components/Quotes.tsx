@@ -9,9 +9,9 @@ interface Props {
 }
 
 const STATUS_COLOR: Record<RfqStatus, string> = {
-  received: '#94a3b8',
-  parsed: '#60a5fa',
-  priced: '#a78bfa',
+  received: 'var(--idle)',
+  parsed: 'var(--cat1)',
+  priced: 'var(--cat4)',
   sent: colors.warn,
   won: colors.success,
   lost: colors.textMuted,

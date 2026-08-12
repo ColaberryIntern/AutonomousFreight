@@ -176,7 +176,7 @@ export function DeploymentPage({ token }: Props): React.ReactElement {
         </div>
       </div>
 
-      <div style={{ ...styles.card, background: '#f8fafc' }}>
+      <div style={{ ...styles.card, background: 'var(--raised)' }}>
         <h3 style={styles.h3}>Integration readiness</h3>
         <table style={styles.table}>
           <thead>
