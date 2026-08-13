@@ -22,6 +22,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { buildInbox } from './inboxData';
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -68,46 +69,66 @@ ${QUEUE.map(([lane, cust, l, c, why, rule, age, val]) => `<div class="qr">
 <div class="empty-demo"><div class="ed-in">${chip('ok', 'Queue clear')}
   <b>Nothing needs you right now.</b><span>The goal state, not a blank screen. 25 RFQs cleared themselves in the last hour.</span></div></div>`;
 
-const S_RFQ = `
-<div class="split">
- <div>
-  <div class="sec">What the machine read <span class="sec-n">every value carries the rule that produced it and the customer's own words</span></div>
-  <div class="flds">
-    ${fld('Origin', 'El Paso, TX', 'D7 location grammar', 'pick up in El Paso TX')}
-    ${fld('Destination', 'Detroit, MI', 'D7 location grammar', 'deliver to Detroit MI')}
-    ${fld('Equipment', 'Sprinter', 'D5 smallest-fit', 'need a sprinter van')}
-    ${fld('Weight', '3,200 lb', 'D3 extraction', '3200 lbs of auto parts')}
-    ${fld('Pickup date', 'not found', 'D8 urgency', null)}
-    ${fld('Commodity', 'auto parts', 'D3 extraction', '3200 lbs of auto parts')}
-  </div>
-  <div class="sec">Service options <span class="sec-n">D6 fired 3 rules, producing 5 priced options</span></div>
-  <div class="opts">
-  ${[['EXPEDITE EXCLUSIVE', '$2,982', 'D6.3 ASAP + sprinter', 1], ['EXP TEAM', '$3,410', 'D6.3', 0],
-     ['EXP SOLO', '$2,740', 'D6.1', 0], ['ELTL', '$1,980', 'D6.5', 0], ['FTL', '$2,240', 'D6 default', 0]]
-    .map(([n, p, r, best]) => `<div class="opt${best ? ' best' : ''}"><div class="on">${n}${best ? '<span class="rec">recommended</span>' : ''}</div>
-      <div class="op">${p}</div><div class="or"><code>${r}</code></div></div>`).join('')}
-  </div>
- </div>
- <div>
-  <div class="side-card"><div class="sck">Decision</div><div class="scv">${chip('attn', 'Needs a human')}</div>
-   <p class="scp">Confidence ${meter(0.9)} clears the 0.85 auto-send threshold, but the quote sits
-   <b>3% under the 7% margin floor</b>, so the margin gate held it.</p>
-   <div><button class="b p full">Approve and send quote</button><button class="b full">Re-price</button>
-   <button class="b full">Override margin floor</button></div></div>
-  <div class="side-card"><div class="sck">Source email</div>
-   <pre class="mailx">From: dispatch@mksglobal.com
-Subject: HOT SHOT
+const INBOX = buildInbox(12);
 
-Need a sprinter van ASAP, pick up in
-El Paso TX and deliver to Detroit MI.
-3200 lbs of auto parts. Dock high.
-Let me know your best rate.</pre></div>
-  <div class="side-card"><div class="sck">Audit</div><ul class="aud">
-   <li><span>10:02:14</span> Email ingested, hash dedup passed</li>
-   <li><span>10:02:14</span> Extractor ran, 6 fields, conf 0.90</li>
-   <li><span>10:02:15</span> D6 fired 3 rules, 5 options</li>
-   <li><span>10:02:15</span> Margin gate held, routed to human</li></ul></div>
- </div></div>`;
+/**
+ * RFQ intake: the three-pane review workspace.
+ *
+ * Borrowed wholesale rather than invented, per the brief:
+ *  - Rossum / Docsumo / Hyperscience: click a field and the exact source text
+ *    highlights in the document. Confidence under threshold flags the field for
+ *    review. This is THE established pattern for extraction review and it is
+ *    what makes an extraction auditable instead of a guess.
+ *  - Drumkit: a triaged inbox with a decision sidebar, so a rep sees what needs
+ *    them at a glance rather than reading top to bottom.
+ *  - Front / Superhuman: the list, message, context three-pane shape.
+ *
+ * The emails are REAL, straight from the ShipCES corpus, and so are the parses:
+ * the same parseEml to parseEmailToRfq chain the tests run. Where the parser
+ * failed, the screen shows it failing.
+ */
+const S_RFQ = `
+<div class="inbox">
+  <div class="ib-list">
+    <div class="ib-lh"><b>Intake</b><span>${INBOX.filter((i) => i.needsHumanReview).length} need you of ${INBOX.length}</span></div>
+    <div class="ib-items" id="ibItems">
+    ${INBOX.map((it, n) => `<button class="ib-i${n === 0 ? ' on' : ''}" data-n="${n}">
+      <div class="ib-top"><span class="ib-from">${esc(it.fromName)}</span>
+        <span class="ib-conf ${it.confidence >= 0.85 ? 'hi' : it.confidence >= 0.6 ? 'mid' : 'lo'}">${it.confidence.toFixed(2)}</span></div>
+      <div class="ib-sub">${esc(it.subject)}</div>
+      <div class="ib-meta">${it.needsHumanReview ? chip('attn', 'needs you') : chip('ok', 'auto')}
+        <span class="ib-fill">${it.found}/${it.total} fields</span>
+        ${it.lang === 'es' ? '<span class="ib-lang">ES</span>' : ''}</div>
+    </button>`).join('')}
+    </div>
+  </div>
+
+  <div class="ib-mail">
+    <div class="ib-mh">
+      <div><div class="ib-msub" id="mSub"></div>
+        <div class="ib-mfrom" id="mFrom"></div></div>
+      <div id="mSrc"></div>
+    </div>
+    <div class="ib-body"><pre id="mBody"></pre></div>
+    <div class="ib-hint">Click any field on the right to highlight where it was read from.</div>
+  </div>
+
+  <div class="ib-side">
+    <div class="ib-sh">
+      <div class="sck">Extracted</div>
+      <div id="mOverall"></div>
+    </div>
+    <div id="mFields"></div>
+    <div class="ib-acts" id="mActs"></div>
+  </div>
+</div>
+<div class="drill" id="drill" aria-hidden="true">
+  <div class="drill-bd" id="drillBd"></div>
+  <aside class="drill-p" role="dialog" aria-label="Field detail">
+    <div class="drill-h"><b id="dTitle"></b><button class="b" id="dClose">Close</button></div>
+    <div class="drill-c" id="dBody"></div>
+  </aside>
+</div>`;
 
 const LOADS = [
   ['AF-2041', 'El Paso, TX to Detroit, MI', 'MKS Global', 'OMS', 'Quote sent', 0.9, '$2,982', 'attn'],
@@ -528,6 +549,69 @@ header h1{margin:8px 0;font-size:30px}header p{margin:0;max-width:78ch}
 .fi:last-child{border-bottom:0}
 .ft{color:var(--muted);font-variant-numeric:tabular-nums;font-size:11px;width:52px;flex-shrink:0}
 .fa{font-weight:600;color:var(--ink);width:96px;flex-shrink:0}.fm{flex:1}
+
+/* ---- RFQ intake: three-pane review workspace ---- */
+.inbox{display:grid;grid-template-columns:252px 1fr 310px;gap:12px;height:600px}
+.ib-list,.ib-mail,.ib-side{background:var(--surface);border:1px solid var(--line);border-radius:9px;display:flex;flex-direction:column;min-height:0}
+.ib-lh{padding:10px 13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline}
+.ib-lh b{font-size:13px;color:var(--ink)}.ib-lh span{font-size:11px;color:var(--muted)}
+.ib-items{overflow-y:auto;flex:1}
+.ib-i{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);
+ border-left:3px solid transparent;padding:9px 12px;cursor:pointer;font-family:inherit}
+.ib-i:hover{background:var(--raised)}
+.ib-i.on{background:var(--accent-soft);border-left-color:var(--accent)}
+.ib-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ib-from{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib-conf{font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums;padding:1px 5px;border-radius:3px}
+.ib-conf.hi{color:var(--ok);background:var(--ok-bg)}
+.ib-conf.mid{color:var(--attn);background:var(--attn-bg)}
+.ib-conf.lo{color:var(--block);background:var(--block-bg)}
+.ib-sub{font-size:11.5px;color:var(--ink2);margin-top:2px;line-height:1.35;
+ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ib-meta{display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap}
+.ib-fill{font-size:10px;color:var(--muted)}
+.ib-lang{font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+.ib-mh{padding:11px 15px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.ib-msub{font-size:14px;font-weight:650;color:var(--ink);line-height:1.35}
+.ib-mfrom{font-size:11.5px;color:var(--muted);margin-top:2px}
+.ib-body{flex:1;overflow-y:auto;padding:14px 16px}
+.ib-body pre{margin:0;white-space:pre-wrap;word-break:break-word;
+ font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink2)}
+.ib-body mark{background:transparent;color:inherit;border-bottom:2px solid var(--accent);opacity:.6;padding:1px 0;cursor:pointer}
+.ib-body mark.act{background:var(--accent);color:#fff;opacity:1;border-radius:3px;padding:1px 4px;border-bottom:0;
+ box-shadow:0 0 0 3px var(--accent-soft)}
+.ib-hint{padding:8px 15px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+.ib-sh{padding:11px 14px;border-bottom:1px solid var(--line)}
+.ib-side{overflow-y:auto}
+.ibf{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);
+ padding:9px 14px;cursor:pointer;font-family:inherit}
+.ibf:hover{background:var(--raised)}
+.ibf.on{background:var(--accent-soft)}
+.ibf .k{font-size:9.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);
+ display:flex;justify-content:space-between;align-items:center;gap:6px}
+.ibf .v{font-size:13.5px;font-weight:600;color:var(--ink);margin-top:2px}
+.ibf.asm .v{color:var(--muted);font-weight:500;text-decoration:underline dashed var(--muted) 1px;text-underline-offset:3px}
+.ibf .r{margin-top:4px}
+.ibf .why{font-size:10.5px;color:var(--accent);font-weight:600;margin-top:4px;display:inline-block}
+.ib-acts{padding:12px 14px;border-top:1px solid var(--line)}
+.src{font-size:9.5px;font-weight:700;letter-spacing:.5px;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.src.real{color:var(--block);background:var(--block-bg)}
+.src.test{color:var(--ok);background:var(--ok-bg)}
+.drill{position:fixed;inset:0;z-index:80;display:none}
+.drill.on{display:block}
+.drill-bd{position:absolute;inset:0;background:rgba(15,23,41,.45)}
+.drill-p{position:absolute;top:0;right:0;bottom:0;width:min(430px,94vw);background:var(--surface);
+ border-left:1px solid var(--line);box-shadow:-16px 0 46px rgba(15,23,41,.2);display:flex;flex-direction:column}
+.drill-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.drill-h b{font-size:15px;color:var(--ink)}
+.drill-c{padding:16px 18px;overflow-y:auto}
+.dsec{font-size:9.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);margin:16px 0 7px}
+.dquote{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;
+ padding:10px 12px;font:12px/1.55 ui-monospace,Menlo,monospace;color:var(--ink2);white-space:pre-wrap}
+.drow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.drow:last-child{border-bottom:0}
+.drow span{color:var(--muted)}.drow b{color:var(--ink);font-weight:600;text-align:right}
+@media (max-width:1150px){.inbox{grid-template-columns:1fr;height:auto}.ib-list{max-height:220px}}
 .screen{display:none}.screen.on{display:block}
 footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
@@ -622,6 +706,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-si
 <script>
 (function(){
  var TRACE=${JSON.stringify(TRACE)};
+ var INBOX=${JSON.stringify(INBOX)};
  var META=${JSON.stringify(Object.fromEntries(Object.entries(SCREENS).map(([k, v]) => [k, { title: v.title, sub: v.sub }])))};
  var r=document.documentElement,tl=document.getElementById('tl'),td=document.getElementById('td');
  function theme(m){m?r.setAttribute('data-theme',m):r.removeAttribute('data-theme');
@@ -653,6 +738,112 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-si
  steps.forEach(function(s){s.onclick=function(){step(parseInt(s.getAttribute('data-i'),10))}});
  document.getElementById('next').onclick=function(){step(cur+1)};
  document.getElementById('prev').onclick=function(){step(cur-1)};
+
+
+ /* ---- RFQ intake: Rossum-style drill-through, Drumkit-style triage ---- */
+ (function(){
+  var items=[].slice.call(document.querySelectorAll('.ib-i'));
+  if(!items.length||typeof INBOX==='undefined') return;
+  var cur=0;
+  var body=document.getElementById('mBody');
+  function escH(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function METER(v){var b=v>=0.85?'hi':v>=0.6?'mid':'lo';
+   return '<span class="meter '+b+'"><span class="mt"><span class="mf" style="width:'+Math.round(v*100)+'%"></span></span><b>'+v.toFixed(2)+'</b></span>';}
+  function CHIP(k,l){var g={ok:'✓',attn:'⚑',block:'✕',idle:'•'};
+   return '<span class="chip '+k+'"><i>'+g[k]+'</i>'+l+'</span>';}
+
+  function paint(it,activeKey){
+   var spans=it.fields.filter(function(f){return f.evidence;})
+    .map(function(f){return {s:f.evidence.start,e:f.evidence.end,k:f.key};})
+    .sort(function(a,b){return a.s-b.s;});
+   var out='',at=0;
+   spans.forEach(function(sp){
+    if(sp.s<at) return;
+    out+=escH(it.body.slice(at,sp.s));
+    out+='<mark class="'+(sp.k===activeKey?'act':'')+'" data-k="'+sp.k+'">'+escH(it.body.slice(sp.s,sp.e))+'</mark>';
+    at=sp.e;
+   });
+   out+=escH(it.body.slice(at));
+   body.innerHTML=out;
+   var a=body.querySelector('mark.act');
+   if(a&&a.scrollIntoView) a.scrollIntoView({block:'center'});
+  }
+
+  function renderFields(it){
+   document.getElementById('mFields').innerHTML=it.fields.map(function(f){
+    return '<button class="ibf'+(f.assumed?' asm':'')+'" data-k="'+f.key+'">'+
+     '<div class="k"><span>'+f.label+'</span>'+(f.assumed?'<span class="asmt">assumed</span>':'')+'</div>'+
+     '<div class="v">'+escH(f.value)+'</div>'+
+     '<div class="r"><code>'+f.rule+'</code></div>'+
+     '<span class="why">'+(f.evidence?'Show source and why':'Why is this missing?')+'</span></button>';
+   }).join('');
+   [].slice.call(document.querySelectorAll('.ibf')).forEach(function(b){
+    b.onclick=function(){
+     var k=b.getAttribute('data-k');
+     [].slice.call(document.querySelectorAll('.ibf')).forEach(function(x){x.classList.toggle('on',x===b);});
+     paint(INBOX[cur],k);
+     openDrill(INBOX[cur],k);
+    };
+   });
+  }
+
+  function select(n){
+   cur=n;
+   var it=INBOX[n];
+   items.forEach(function(b,j){b.classList.toggle('on',j===n);});
+   document.getElementById('mSub').textContent=it.subject;
+   document.getElementById('mFrom').textContent=it.fromName+'  <'+it.from+'>   '+it.receivedAt.slice(0,10);
+   document.getElementById('mSrc').innerHTML=
+    '<span class="src '+(it.found>0?'test':'real')+'">'+(it.found>0?String(it.found)+' of '+it.total+' read':'nothing read')+'</span>';
+   document.getElementById('mOverall').innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px">'+
+    METER(it.confidence)+(it.needsHumanReview?CHIP('attn','needs you'):CHIP('ok','auto'))+'</div>'+
+    '<div style="font-size:11px;color:var(--muted);margin-top:6px">'+it.found+' of '+it.total+
+    ' fields read from the email'+(it.hitl!=='none'?' &middot; routed: '+it.hitl:'')+'</div>';
+   document.getElementById('mActs').innerHTML= it.needsHumanReview
+    ? '<button class="b p full">Fill gaps and quote</button><button class="b full">Reply asking for missing data</button>'
+    : '<button class="b p full">Approve and send quote</button><button class="b full">Re-price</button>';
+   renderFields(it);
+   paint(it,null);
+  }
+
+  var drill=document.getElementById('drill');
+  function openDrill(it,k){
+   var f=null; it.fields.forEach(function(x){if(x.key===k)f=x;});
+   if(!f) return;
+   document.getElementById('dTitle').textContent=f.label;
+   var src=f.evidence
+    ? '<div class="dsec">Read from the email</div><div class="dquote">'+escH(it.body.slice(f.evidence.start,f.evidence.end))+'</div>'+
+      '<div class="dsec">In context</div><div class="dquote">'+escH(it.body.slice(Math.max(0,f.evidence.start-100),f.evidence.end+100))+'</div>'
+    : '<div class="dsec">No supporting text</div><div class="dquote">Nothing in this email supports a value for '+
+      f.label.toLowerCase()+'. The parser supplied a default, so it is marked assumed and the RFQ went to a human instead of being quoted.</div>';
+   document.getElementById('dBody').innerHTML=
+    '<div class="dsec">Value</div>'+
+    '<div class="drow"><span>Extracted</span><b>'+escH(f.value)+'</b></div>'+
+    '<div class="drow"><span>Rule that fired</span><b><code>'+f.rule+'</code></b></div>'+
+    '<div class="drow"><span>Evidence</span><b>'+(f.evidence?'characters '+f.evidence.start+' to '+f.evidence.end:'none')+'</b></div>'+
+    '<div class="drow"><span>Overall confidence</span><b>'+it.confidence.toFixed(2)+'</b></div>'+
+    '<div class="drow"><span>Routing</span><b>'+(it.needsHumanReview?'human review':'automatic')+'</b></div>'+
+    src+
+    '<div class="dsec">If you correct this</div><div style="font-size:12.5px;line-height:1.55">'+
+    'The correction is written to the calibrated corpus and becomes a regression case, so the same mistake '+
+    'fails the build next time rather than being relearned by hand.</div>';
+   drill.classList.add('on'); drill.setAttribute('aria-hidden','false');
+  }
+  function closeDrill(){drill.classList.remove('on');drill.setAttribute('aria-hidden','true');}
+  document.getElementById('dClose').onclick=closeDrill;
+  document.getElementById('drillBd').onclick=closeDrill;
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDrill();});
+  items.forEach(function(b,n){b.onclick=function(){select(n);};});
+  body.addEventListener('click',function(e){
+   var t=e.target;
+   if(t&&t.tagName==='MARK'){
+    var btn=document.querySelector('.ibf[data-k="'+t.getAttribute('data-k')+'"]');
+    if(btn) btn.click();
+   }
+  });
+  select(0);
+ })();
 
  show('queue');
 })();
