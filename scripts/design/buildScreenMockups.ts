@@ -122,6 +122,18 @@ const S_RFQ = `
     <div class="ib-acts" id="mActs"></div>
   </div>
 </div>
+
+<div class="drill ord" id="ordDrill" aria-hidden="true">
+  <div class="drill-bd" id="ordBd"></div>
+  <aside class="drill-p wide" role="dialog" aria-label="Order record">
+    <div class="drill-h">
+      <div><b id="oTitle"></b><div class="ohsub" id="oSub"></div></div>
+      <button class="b" id="oClose">Close</button>
+    </div>
+    <div class="orail" id="oRail"></div>
+    <div class="drill-c" id="oBody"></div>
+  </aside>
+</div>
 <div class="drill" id="drill" aria-hidden="true">
   <div class="drill-bd" id="drillBd"></div>
   <aside class="drill-p" role="dialog" aria-label="Field detail">
@@ -139,6 +151,138 @@ const LOADS = [
   ['AF-2036', 'Acatl&aacute;n to Atlanta, GA', 'Arizlu', 'RMS', 'Awaiting human', 0.2, 'not priced', 'block'],
 ];
 
+
+/**
+ * Per-order dossier data for the order drill-through.
+ *
+ * Each order carries one block per lifecycle layer, and each block declares its
+ * own state: done, current, or future. That is what lets the panel colour-code
+ * by stage AND show at a glance how far the order has travelled, which is the
+ * whole point of sectioning it this way.
+ *
+ * Values are consistent with the rest of the prototype: AF-2041 is the load the
+ * trace bar follows, and its BMS block is the real AF-INV-0001 at $2,982.
+ */
+interface Blk { state: 'done' | 'current' | 'future'; head: string; rows: [string, string][]; note?: string; sub?: { t: string; items: [string, string, string][] } }
+interface Order {
+  id: string; lane: string; cust: string; stage: string; status: string; kind: Kind;
+  value: string; conf: number; opened: string;
+  rms: Blk; oms: Blk; tms: Blk; bms: Blk;
+}
+
+const ORDERS: Order[] = [
+  {
+    id: 'AF-2041', lane: 'El Paso, TX to Detroit, MI', cust: 'MKS Global', stage: 'OMS',
+    status: 'Quote sent', kind: 'attn', value: '$2,982', conf: 0.9, opened: '2026-08-06 10:02',
+    rms: { state: 'done', head: 'Read and understood',
+      rows: [['Received', '2026-08-06 10:02:14'], ['From', 'dispatch@mksglobal.com'],
+             ['Subject', 'HOT SHOT'], ['Fields read', '6 of 6'], ['Confidence', '0.90'],
+             ['Routing', 'no human needed at intake'], ['Dedup key', 'email_9f2c...a41b']],
+      note: 'D6 fired 3 rules and produced 5 priced service options from one email.' },
+    oms: { state: 'current', head: 'Priced, held at the margin gate',
+      rows: [['Shipment', 'SHP-01JQ7F'], ['Sell rate', '$2,982'], ['Target buy', '$2,450'],
+             ['Margin', '17.8%'], ['Margin floor', '7.0%'], ['Gate', 'HELD, 3% under floor on the chosen option'],
+             ['Tender', 'not sent, waiting on approval']],
+      sub: { t: 'State history', items: [
+        ['RECEIVED', '10:02:14', 'done'], ['PARSED', '10:02:15', 'done'],
+        ['PRICED', '10:02:15', 'done'], ['QUOTE_SENT', '10:04:02', 'done'],
+        ['WON', 'pending customer', 'future'], ['TENDERED', 'blocked on WON', 'future']] } },
+    tms: { state: 'future', head: 'Not started',
+      rows: [['Blocked by', 'OMS tender, EDI 910 only fires from WON']],
+      note: 'Sourcing cannot begin until the order is won and tendered.' },
+    bms: { state: 'future', head: 'Not started',
+      rows: [['Blocked by', 'TMS delivery, Bill-Ready only fires from DELIVERED']] },
+  },
+  {
+    id: 'AF-2040', lane: 'Laredo, TX to London, ON', cust: 'Berpar', stage: 'TMS',
+    status: 'In transit', kind: 'ok', value: '$3,120', conf: 0.94, opened: '2026-08-04 08:11',
+    rms: { state: 'done', head: 'Read and understood',
+      rows: [['Received', '2026-08-04 08:11:03'], ['From', 'angela.lugo@berpar.com'],
+             ['Subject', 'FTL // LAREDO- LONDON // 16 PALLETS'], ['Fields read', '6 of 6'],
+             ['Confidence', '0.94'], ['Language', 'Spanish, handled']] },
+    oms: { state: 'done', head: 'Won and tendered',
+      rows: [['Shipment', 'SHP-01JP2A'], ['Sell rate', '$3,120'], ['Buy rate', '$2,510'],
+             ['Margin', '19.6%'], ['Tender', 'EDI 910 accepted 2026-08-04 14:22']] },
+    tms: { state: 'current', head: 'Moving, cross-border',
+      rows: [['Carrier', 'Sanchez Trucking'], ['MC number', 'MC 884201'],
+             ['Sourced from', 'DAT, 7 trucks returned'], ['Vetting', 'FMCSA passed, authority + insurance'],
+             ['Last ping', 'Amarillo, TX, 12m ago'], ['ETA', '2026-08-08 11:00']],
+      sub: { t: 'Milestones, EDI 214', items: [
+        ['X3 Carrier assigned', '08-04 14:31', 'done'], ['AF Departed origin', '08-05 09:02', 'done'],
+        ['X6 In transit', '08-06 14:31', 'done'], ['D1 Delivered', 'expected 08-08', 'future']] } },
+    bms: { state: 'future', head: 'Waiting on delivery',
+      rows: [['Bill-Ready', 'fires on EDI 214 D1'], ['Expected invoice', 'approximately $3,120']] },
+  },
+  {
+    id: 'AF-2039', lane: 'Toccoa, GA to Monterrey', cust: 'Hartrodt', stage: 'TMS',
+    status: 'Sourcing', kind: 'attn', value: '$4,180', conf: 0.61, opened: '2026-08-06 09:14',
+    rms: { state: 'done', head: 'Read, with gaps',
+      rows: [['Received', '2026-08-06 09:14:40'], ['From', 'gabriela.sanchez@hartrodt.com'],
+             ['Subject', 'FREYSSINET, IMPORTACION ATLANTA to MONTERREY'], ['Fields read', '4 of 6'],
+             ['Confidence', '0.61'], ['Routing', 'human review, cross-border']],
+      note: 'Two delivery options in one email. A human picked Monterrey over Tijuana.' },
+    oms: { state: 'done', head: 'Won and tendered',
+      rows: [['Shipment', 'SHP-01JQ4C'], ['Sell rate', '$4,180'], ['Margin', '14.2%'],
+             ['Tender', 'EDI 910 accepted 2026-08-06 10:40']] },
+    tms: { state: 'current', head: 'Blocked, no capacity',
+      rows: [['Sourced from', 'DAT, 0 trucks on this lane'], ['Escalation', 'raised 10:41'],
+             ['Blocker', 'no Monterrey cross-border specialist assigned'], ['Owner', 'Ali, HITL W7']],
+      note: 'This is the exception path working: no capacity surfaced as an escalation rather than an empty result.' },
+    bms: { state: 'future', head: 'Not started', rows: [['Blocked by', 'TMS delivery']] },
+  },
+  {
+    // Delivered, so the Bill-Ready handoff has already fired and the order now
+    // sits in BMS. The row badge has to agree with whichever block is `current`,
+    // or the board and the record tell the operator two different stories.
+    id: 'AF-2038', lane: 'Holland, MI to Duncan, SC', cust: 'ACS', stage: 'BMS',
+    status: 'Bill-Ready', kind: 'ok', value: '$2,455', conf: 0.97, opened: '2026-08-01 07:40',
+    rms: { state: 'done', head: 'Read and understood',
+      rows: [['Received', '2026-08-01 07:40:12'], ['From', 'ashley.timpanaro@acs.com'],
+             ['Subject', 'ACS QUOTE REQUEST / PA-TX'], ['Fields read', '6 of 6'], ['Confidence', '0.97']] },
+    oms: { state: 'done', head: 'Won and tendered',
+      rows: [['Shipment', 'SHP-01JN8D'], ['Sell rate', '$2,455'], ['Buy rate', '$1,980'], ['Margin', '19.3%']] },
+    tms: { state: 'done', head: 'Delivered on time',
+      rows: [['Carrier', 'Duncan Freight Lines'], ['Delivered', '2026-08-05 10:22'],
+             ['POD', 'received, signed'], ['Detention', 'none']],
+      sub: { t: 'Milestones, EDI 214', items: [
+        ['X3 Carrier assigned', '08-01 11:02', 'done'], ['AF Departed origin', '08-02 06:40', 'done'],
+        ['X6 In transit', '08-03 08:15', 'done'], ['D1 Delivered', '08-05 10:22', 'done']] } },
+    bms: { state: 'current', head: 'Bill-Ready, invoice not yet issued',
+      rows: [['Bill-Ready', 'created 2026-08-05 10:23'], ['Linehaul', '$1,980'],
+             ['Fuel surcharge', '$356'], ['Accessorials', 'none'], ['Status', 'awaiting Invoice agent run']] },
+  },
+  {
+    id: 'AF-2037', lane: 'Laredo, TX to Shelby Twp, MI', cust: 'Vasa', stage: 'BMS',
+    status: 'Invoiced', kind: 'ok', value: '$2,982', conf: 0.99, opened: '2026-07-28 06:22',
+    rms: { state: 'done', head: 'Read and understood',
+      rows: [['Received', '2026-07-28 06:22:51'], ['From', 'comercial@vasa.mx'],
+             ['Subject', 'RFQ // Laredo TX to Shelby Township MI'], ['Fields read', '6 of 6'], ['Confidence', '0.99']] },
+    oms: { state: 'done', head: 'Won and tendered',
+      rows: [['Shipment', 'SHP-01JK1B'], ['Sell rate', '$2,982'], ['Buy rate', '$2,450'], ['Margin', '17.8%']] },
+    tms: { state: 'done', head: 'Delivered',
+      rows: [['Carrier', 'Sanchez Trucking'], ['Delivered', '2026-08-01 14:05'], ['POD', 'received, signed']] },
+    bms: { state: 'current', head: 'Invoiced and matched',
+      rows: [['Invoice', 'AF-INV-0001'], ['Total', '$2,982.00'], ['Terms', 'Net 30, due 2026-09-05'],
+             ['Three-way match', 'passed'], ['Margin', '17.8%, above the 5% audit floor'],
+             ['Settlement', 'carrier queued for payment']],
+      sub: { t: 'Invoice lines, EDI 210', items: [
+        ['400 Linehaul', '$2,450.00', 'done'], ['405 Fuel surcharge 18%', '$441.00', 'done'],
+        ['ADET Detention 1.5 hr', '$90.00', 'done'], ['ASRV Dock high', '$1.00', 'done']] } },
+  },
+  {
+    id: 'AF-2036', lane: 'Acatlan to Atlanta, GA', cust: 'Arizlu', stage: 'RMS',
+    status: 'Awaiting human', kind: 'block', value: 'not priced', conf: 0.2, opened: '2026-08-06 09:51',
+    rms: { state: 'current', head: 'Could not read it',
+      rows: [['Received', '2026-08-06 09:51:09'], ['From', 'francisco.escarcega@arizlu.mx'],
+             ['Subject', 'Nueva cotizacion spot // Arizlu // Acatlan to Atlanta'],
+             ['Fields read', '0 of 6'], ['Confidence', '0.20'], ['Routing', 'human review, extraction failed']],
+      note: 'Spanish body. The regex baseline found no lane. This is exactly what RMS S1, the Claude extractor, exists to fix.' },
+    oms: { state: 'future', head: 'Not started', rows: [['Blocked by', 'RMS extraction']] },
+    tms: { state: 'future', head: 'Not started', rows: [['Blocked by', 'OMS tender']] },
+    bms: { state: 'future', head: 'Not started', rows: [['Blocked by', 'TMS delivery']] },
+  },
+];
+
 const S_LOADS = `
 <div class="pipe">
 ${[['RMS', 'Intake &amp; RFQ', '12 open', 'rms'], ['OMS', 'Stage &amp; tender', '8 staged', 'oms'],
@@ -148,10 +292,11 @@ ${[['RMS', 'Intake &amp; RFQ', '12 open', 'rms'], ['OMS', 'Stage &amp; tender', 
 <div class="filters"><span class="fchip on">All 24</span><span class="fchip">Needs a human 4</span>
 <span class="fchip">Moving 3</span><span class="fchip">Billing 1</span><span class="fspace"></span>
 <span class="fchip ghost">Lane</span><span class="fchip ghost">Customer</span><span class="fchip ghost">Age</span></div>
+<div class="tblhint">Click any order to open its full record, sectioned by stage.</div>
 <table class="tbl"><thead><tr><th>Load</th><th>Lane</th><th>Customer</th><th>Stage</th><th>Status</th><th>Confidence</th><th class="ra">Value</th></tr></thead><tbody>
-${LOADS.map(([id, lane, cust, l, st, c, val, k]) => `<tr${id === 'AF-2041' ? ' class="hl"' : ''}>
-  <td><b>${id}</b></td><td>${lane}</td><td>${cust}</td><td>${lyr(String(l))}</td>
-  <td>${chip(k as Kind, String(st))}</td><td>${meter(Number(c))}</td><td class="ra">${val}</td></tr>`).join('')}
+${ORDERS.map((o) => `<tr class="ordrow${o.id === 'AF-2041' ? ' hl' : ''}" data-ord="${o.id}" tabindex="0">
+  <td><b>${o.id}</b></td><td>${o.lane}</td><td>${o.cust}</td><td>${lyr(o.stage)}</td>
+  <td>${chip(o.kind, o.status)}</td><td>${meter(o.conf)}</td><td class="ra">${o.value}</td></tr>`).join('')}
 </tbody></table>`;
 
 const S_TMS = `
@@ -612,6 +757,50 @@ header h1{margin:8px 0;font-size:30px}header p{margin:0;max-width:78ch}
 .drow:last-child{border-bottom:0}
 .drow span{color:var(--muted)}.drow b{color:var(--ink);font-weight:600;text-align:right}
 @media (max-width:1150px){.inbox{grid-template-columns:1fr;height:auto}.ib-list{max-height:220px}}
+
+/* ---- order drill-through: sectioned and colour-coded by stage ---- */
+.tblhint{font-size:11.5px;color:var(--muted);margin:-4px 0 9px}
+tr.ordrow{cursor:pointer}
+tr.ordrow:hover td{background:var(--accent-soft)}
+tr.ordrow:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.drill-p.wide{width:min(660px,96vw)}
+.ohsub{font-size:11.5px;color:var(--muted);margin-top:2px}
+/* stage rail: where this order is, at a glance */
+.orail{display:flex;gap:3px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--raised)}
+.ost{flex:1;border-radius:6px;padding:7px 9px;text-align:center;position:relative}
+.ost .osk{font-size:9.5px;font-weight:700;letter-spacing:.8px}
+.ost .oss{font-size:10px;margin-top:1px;opacity:.9}
+.ost.done{color:#fff}
+.ost.done.RMS{background:var(--rms);color:#0f1729}.ost.done.OMS{background:var(--oms)}
+.ost.done.TMS{background:var(--tms)}.ost.done.BMS{background:var(--bms)}
+:root[data-theme="dark"] .ost.done.RMS{color:#fff}:root[data-theme="dark"] .ost.done.BMS{color:#0f1729}
+.ost.current{color:#fff;box-shadow:0 0 0 3px var(--accent-soft),0 0 0 4px var(--accent)}
+.ost.current.RMS{background:var(--rms);color:#0f1729}.ost.current.OMS{background:var(--oms)}
+.ost.current.TMS{background:var(--tms)}.ost.current.BMS{background:var(--bms)}
+:root[data-theme="dark"] .ost.current.RMS{color:#fff}:root[data-theme="dark"] .ost.current.BMS{color:#0f1729}
+.ost.future{background:var(--surface);border:1px dashed var(--line);color:var(--muted)}
+/* one section per layer, left-barred in the layer colour */
+.osec{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:0 9px 9px 0;
+ margin-bottom:14px;overflow:hidden;background:var(--surface)}
+.osec.RMS{border-left-color:var(--rms)}.osec.OMS{border-left-color:var(--oms)}
+.osec.TMS{border-left-color:var(--tms)}.osec.BMS{border-left-color:var(--bms)}
+.osec.future{opacity:.62}
+.osec-h{display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--raised)}
+.osec-h .lyr{flex-shrink:0}
+.osec-h .oht{font-size:13px;font-weight:650;color:var(--ink);flex:1}
+.osec-b{padding:4px 14px 10px}
+.onote{font-size:12px;color:var(--ink2);background:var(--accent-soft);border-radius:6px;
+ padding:8px 11px;margin:9px 0 2px;line-height:1.5}
+.osub{margin:11px 0 2px}
+.osub-t{font-size:9.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.osub-i{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12px}
+.osub-i:last-child{border-bottom:0}
+.osub-i .od{width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0}
+.osub-i.future .od{background:transparent;border:2px solid var(--line)}
+.osub-i.future{color:var(--muted)}
+.osub-i .ol{flex:1;color:var(--ink)}
+.osub-i.future .ol{color:var(--muted)}
+.osub-i .ov{color:var(--muted);font-variant-numeric:tabular-nums;font-size:11.5px}
 .screen{display:none}.screen.on{display:block}
 footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
@@ -707,6 +896,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-si
 (function(){
  var TRACE=${JSON.stringify(TRACE)};
  var INBOX=${JSON.stringify(INBOX)};
+ window.__ORDERS__=${JSON.stringify(ORDERS)};
  var META=${JSON.stringify(Object.fromEntries(Object.entries(SCREENS).map(([k, v]) => [k, { title: v.title, sub: v.sub }])))};
  var r=document.documentElement,tl=document.getElementById('tl'),td=document.getElementById('td');
  function theme(m){m?r.setAttribute('data-theme',m):r.removeAttribute('data-theme');
@@ -843,6 +1033,58 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-si
    }
   });
   select(0);
+ })();
+
+
+ /* ---- order drill-through ---- */
+ (function(){
+  var ORDERS_D = window.__ORDERS__;
+  if(!ORDERS_D) return;
+  var od=document.getElementById('ordDrill');
+  var LAYERS=['RMS','OMS','TMS','BMS'];
+  var LNAME={RMS:'Intake and RFQ',OMS:'Stage and tender',TMS:'Source and track',BMS:'Bill and settle'};
+  function escH(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function CHIP(k,l){var g={ok:'✓',attn:'⚑',block:'✕',idle:'•'};
+   return '<span class="chip '+k+'"><i>'+g[k]+'</i>'+l+'</span>';}
+
+  function open(id){
+   var o=null; ORDERS_D.forEach(function(x){if(x.id===id)o=x;});
+   if(!o) return;
+   document.getElementById('oTitle').textContent=o.id+'  '+o.lane;
+   document.getElementById('oSub').innerHTML=escH(o.cust)+' &middot; opened '+o.opened+' &middot; '+escH(o.value);
+
+   document.getElementById('oRail').innerHTML=LAYERS.map(function(L){
+    var b=o[L.toLowerCase()];
+    return '<div class="ost '+b.state+' '+L+'"><div class="osk">'+L+'</div>'+
+     '<div class="oss">'+(b.state==='done'?'complete':b.state==='current'?'here now':'not started')+'</div></div>';
+   }).join('');
+
+   document.getElementById('oBody').innerHTML=LAYERS.map(function(L){
+    var b=o[L.toLowerCase()];
+    var rows=b.rows.map(function(r){
+     return '<div class="drow"><span>'+escH(r[0])+'</span><b>'+escH(r[1])+'</b></div>';}).join('');
+    var sub=b.sub?'<div class="osub"><div class="osub-t">'+escH(b.sub.t)+'</div>'+
+      b.sub.items.map(function(i){
+       return '<div class="osub-i '+i[2]+'"><span class="od"></span><span class="ol">'+escH(i[0])+
+        '</span><span class="ov">'+escH(i[1])+'</span></div>';}).join('')+'</div>':'';
+    var note=b.note?'<div class="onote">'+escH(b.note)+'</div>':'';
+    return '<div class="osec '+L+' '+b.state+'">'+
+     '<div class="osec-h"><span class="lyr '+L+'">'+L+'</span>'+
+      '<span class="oht">'+escH(b.head)+'</span>'+
+      (b.state==='current'?CHIP('attn','here now'):b.state==='done'?CHIP('ok','complete'):CHIP('idle','not started'))+
+     '</div><div class="osec-b">'+rows+sub+note+'</div></div>';
+   }).join('');
+
+   od.classList.add('on'); od.setAttribute('aria-hidden','false');
+  }
+  function close(){od.classList.remove('on');od.setAttribute('aria-hidden','true');}
+  document.getElementById('oClose').onclick=close;
+  document.getElementById('ordBd').onclick=close;
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+  [].slice.call(document.querySelectorAll('tr.ordrow')).forEach(function(r){
+   r.onclick=function(){open(r.getAttribute('data-ord'));};
+   r.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();open(r.getAttribute('data-ord'));}};
+  });
  })();
 
  show('queue');
