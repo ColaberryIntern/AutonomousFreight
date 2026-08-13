@@ -83,7 +83,7 @@ export function Login({ onLogin }: Props): React.ReactElement {
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
           {err && <p style={styles.err}>{err}</p>}
-          <p style={{ fontSize: 12, color: '#64748b', marginTop: 16 }}>
+          <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 16 }}>
             Demo credentials pre-filled. Admin: <code>tour-admin@af.test</code> /{' '}
             <code>AdminPassword99</code>.
           </p>

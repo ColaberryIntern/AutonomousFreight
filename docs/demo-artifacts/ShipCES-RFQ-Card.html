@@ -1,0 +1,68 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>RFQ card</title>
+<style>
+  :root{--navy:#1a365d;--blue:#2b6cb0;--green:#38a169;--amber:#dd6b20;--red:#e53e3e;--slate:#4a5568;--gray:#718096;--border:#e2e8f0;--bgalt:#f7fafc;}
+  *{box-sizing:border-box;}
+  body{margin:0;padding:24px 0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#2d3748;line-height:1.5;}
+  .wrap{max-width:860px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.08);}
+  header{background:var(--navy);color:#fff;padding:24px 28px;}
+  header .eyebrow{color:#9ec5e8;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:700;}
+  header h1{margin:6px 0 0;font-size:24px;font-weight:800;}
+  header .sub{color:#cbd9e8;font-size:13px;margin-top:6px;}
+  .pad{padding:22px 28px;}
+  .card{border:1px solid var(--border);border-radius:10px;background:#fff;padding:16px 18px;margin-bottom:16px;}
+  .card.blue{border-left:5px solid var(--blue);} .card.green{border-left:5px solid var(--green);}
+  .card.amber{border-left:5px solid var(--amber);} .card.red{border-left:5px solid var(--red);} .card.navy{border-left:5px solid var(--navy);}
+  h2{font-size:16px;font-weight:800;color:var(--navy);margin:0 0 4px;}
+  h3{font-size:13px;font-weight:800;color:var(--navy);margin:0 0 8px;text-transform:uppercase;letter-spacing:.5px;}
+  .muted{color:var(--gray);font-size:12px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--navy);color:#fff;font-weight:700;font-size:12px;}
+  tr:nth-child(even) td{background:var(--bgalt);}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;font-size:13px;}
+  .kv .k{color:var(--gray);font-weight:600;}
+  .kv .v{color:var(--navy);font-weight:600;}
+  .chip{display:inline-block;background:#ebf3fb;color:var(--blue);border:1px solid #cfe0f2;border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:700;margin:2px 4px 2px 0;}
+  .chip.lead{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .pill{display:inline-block;color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:9px;}
+  .total td{font-weight:800;color:var(--navy);font-size:15px;background:#fff;border-top:2px solid var(--navy);}
+  .frames{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .frame{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;}
+  .frame .fh{background:var(--navy);color:#fff;font-size:12px;font-weight:700;padding:7px 12px;}
+  .frame .fb{padding:12px 14px;font-size:12.5px;}
+  .mono{font-family:Consolas,Menlo,monospace;font-size:12px;color:var(--slate);}
+  .foot{border-top:1px solid var(--border);padding:14px 28px 22px;font-size:11px;color:var(--gray);}
+  @media print{body{background:#fff;padding:0;}.wrap{box-shadow:none;border-radius:0;max-width:none;}.noprint{display:none;}}
+  @media(max-width:640px){.frames{grid-template-columns:1fr;}.kv{grid-template-columns:1fr;}}
+</style></head>
+<body><div class="wrap">
+<header><div class="eyebrow">ShipCES Autonomous Brokerage</div><h1>RFQ card</h1><div class="sub">Forward track: one broker email becomes one canonical, validated RFQ.</div></header>
+<div class="pad">
+    <div class="card navy">
+      <h3>The inbound email</h3>
+      <div class="kv">
+        <div class="k">From</div><div class="v">John Dispatcher &lt;dispatch@abcmfg.com&gt;</div>
+        <div class="k">Subject</div><div class="v">URGENT expedite - need a sprinter ASAP</div>
+      </div>
+      <div class="mono" style="margin-top:8px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;">Hi team, please quote from El Paso, TX to Detroit, MI. About 3,200 lbs, sprinter, we need it ASAP - line down. Thanks.</div>
+    </div>
+    <div class="card green">
+      <h2>Canonical RFQ rfq_5NZV31M8FQ659T13CRSFDG3D2D</h2>
+      <div class="kv">
+        <div class="k">Lane</div><div class="v">El Paso, TX to Detroit, MI</div>
+        <div class="k">Equipment</div><div class="v">SPRINTER</div>
+        <div class="k">Weight</div><div class="v">3,200 lb (General freight)</div>
+        <div class="k">Channel</div><div class="v">email</div>
+        <div class="k">Confidence</div><div class="v">0.9 &nbsp;<span class="pill" style="background:#38a169;">status NEW</span></div>
+        <div class="k">Human review</div><div class="v">not needed (both locations, freight and vehicle stated)</div>
+      </div>
+      <div style="margin-top:12px;"><div class="k" style="color:#718096;font-weight:600;font-size:12px;margin-bottom:4px;">Service-type options (Karun D6 multi-option inference)</div><span class="chip lead">EXPEDITE_EXCLUSIVE</span><span class="chip">EXPEDITE_SOLO</span><span class="chip">EXPEDITE_TEAM</span><span class="chip">ELTL</span><span class="chip">FTL</span></div>
+    </div>
+    <div class="card blue">
+      <h3>Idempotency</h3>
+      <div style="font-size:13px;color:#4a5568;">Re-ingesting the identical email returns <b>duplicate</b> with the same rfqId (<span class="mono">rfq_5NZV31M8FQ659T13CRSFDG3D2D</span>). No duplicate quote, no duplicate row. Idempotency key <span class="mono">email_00de6b43ae4dcb3dc6...</span></div>
+    </div>
+  </div>
+<div class="foot">Generated from the real services/* build by <span class="mono">scripts/shipces-demo/buildDemoArtifacts.ts</span> (deterministic, no clock or random). Every value is produced by the same code path as the forward-track demo and pinned by the unit + chain tests. No em-dashes or en-dashes.</div>
+</div></body></html>

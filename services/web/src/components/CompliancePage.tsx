@@ -201,7 +201,7 @@ export function CompliancePage({ token }: Props): React.ReactElement {
                 const pillColor = a.expired ? colors.danger : d < 30 ? colors.warn : colors.success;
                 const pillText = a.expired ? `expired ${-d}d ago` : `in ${d}d`;
                 return (
-                  <tr key={a.id} style={a.expired ? { background: '#fef2f2' } : undefined}>
+                  <tr key={a.id} style={a.expired ? { background: 'var(--block-bg)' } : undefined}>
                     <td style={styles.td}>{a.artifactType.replace(/_/g, ' ')}</td>
                     <td style={styles.td}>
                       <code style={{ fontSize: 12 }}>{a.reference}</code>

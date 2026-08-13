@@ -35,3 +35,9 @@ tmp/autonomy_log.json
 tmp/escalation.json
 !tmp/*.schema.json
 !tmp/README.md
+
+# RFQ regression corpus: real ShipCES customer emails, fetched read-only from
+# Karun's repo via scripts/corpus/fetchCorpus.js. The payload must never enter
+# our git history; the committed corpus-manifest.json (hashes + metadata) is
+# what makes runs reproducible.
+tests/fixtures/corpus/

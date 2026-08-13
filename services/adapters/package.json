@@ -1,0 +1,6 @@
+{
+  "name": "@af/adapters",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Sense Layer — engine-swappable vendor adapters (DAT, FMCSA, Sylectus, Email). Core talks only to the typed contract, never the vendor."
+}

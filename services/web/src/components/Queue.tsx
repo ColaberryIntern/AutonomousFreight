@@ -121,7 +121,7 @@ export function Queue({ token, canApprove, onDetail }: Props): React.ReactElemen
         green = clear, yellow = soft (override required), red = hard block.
       </p>
       {flash && (
-        <div style={{ ...styles.card, background: '#ecfdf5', borderColor: colors.success }}>
+        <div style={{ ...styles.card, background: 'var(--ok-bg)', borderColor: colors.success }}>
           {flash}
         </div>
       )}

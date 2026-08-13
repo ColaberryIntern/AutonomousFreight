@@ -66,12 +66,22 @@ interface HealthSnapshot {
   generatedAt: string;
 }
 
+/**
+ * Departments are an unordered set, so they take the categorical slots in fixed
+ * order. The order IS the colourblind-safety mechanism: assign 1, 2, 3, never
+ * cycle, and never generate a sixth hue for a sixth department (fold it into an
+ * "Other" or facet the view instead).
+ *
+ * Status colours are deliberately absent here. They are reserved for good /
+ * attention / blocked / idle, and a department that borrowed the success green
+ * would read as "this department is healthy" on a war-room node.
+ */
 const DEPT_COLORS: Record<string, { bg: string; label: string }> = {
-  quoting: { bg: '#3B82F6', label: 'Quoting' },
-  procurement: { bg: '#10B981', label: 'Procurement' },
-  execution: { bg: '#F59E0B', label: 'Execution' },
-  documents: { bg: '#8B5CF6', label: 'Documents' },
-  financials: { bg: '#6366F1', label: 'Financials' },
+  quoting: { bg: 'var(--cat1)', label: 'Quoting' },
+  procurement: { bg: 'var(--cat3)', label: 'Procurement' },
+  execution: { bg: 'var(--cat2)', label: 'Execution' },
+  documents: { bg: 'var(--cat4)', label: 'Documents' },
+  financials: { bg: 'var(--cat5)', label: 'Financials' },
 };
 
 const AGENT_DESC: Record<string, string> = {
@@ -432,7 +442,15 @@ export function AgentsPage({ token }: Props): React.ReactElement {
             fontWeight: 600,
             padding: '2px 10px',
             borderRadius: 10,
-            background: mode === 'live' ? '#dc2626' : '#f59e0b',
+            // Was #dc2626 vs #f59e0b. That pair measures dE 9.2 for NORMAL
+            // vision (under the 15 floor), so the two modes were hard to tell
+            // apart before colourblindness was even a factor. Red also misused a
+            // reserved status colour: in this system red means blocked or failed,
+            // and a healthy live feed is not an error. Live is now the good
+            // status; replay is neutral, because replaying history is a mode, not
+            // a warning. The badge already carries a glyph and a text label, so
+            // colour stays the third carrier of meaning.
+            background: mode === 'live' ? 'var(--ok)' : 'var(--idle)',
             color: 'white',
             verticalAlign: 'middle',
             animation: mode === 'live' ? 'pulse-badge 2s infinite' : undefined,
@@ -452,7 +470,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
         <div
           style={{
             ...styles.card,
-            borderLeft: `4px solid ${DEPT_COLORS[selected.department]?.bg ?? '#999'}`,
+            borderLeft: `4px solid ${DEPT_COLORS[selected.department]?.bg ?? 'var(--muted)'}`,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
@@ -461,7 +479,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
                 width: 48,
                 height: 48,
                 borderRadius: 24,
-                background: DEPT_COLORS[selected.department]?.bg ?? '#999',
+                background: DEPT_COLORS[selected.department]?.bg ?? 'var(--muted)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -476,10 +494,10 @@ export function AgentsPage({ token }: Props): React.ReactElement {
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{selected.label}</div>
               <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                <span style={pill(DEPT_COLORS[selected.department]?.bg ?? '#999')}>
+                <span style={pill(DEPT_COLORS[selected.department]?.bg ?? 'var(--muted)')}>
                   {DEPT_COLORS[selected.department]?.label}
                 </span>
-                <span style={pill('#6b7280')}>{selected.type}</span>
+                <span style={pill('var(--muted)')}>{selected.type}</span>
                 <span style={pill(colors.success)}>{selected.status}</span>
               </div>
               <p
@@ -609,7 +627,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
           width: W,
           height: H,
           overflow: 'hidden',
-          background: '#0f172a',
+          background: 'var(--canvas)',
           margin: '0 auto 16px',
           cursor: dragging ? 'grabbing' : 'default',
           userSelect: 'none',
@@ -646,7 +664,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
                 y1={ct.y}
                 x2={p.x}
                 y2={p.y}
-                stroke={DEPT_COLORS[a.department]?.bg ?? '#999'}
+                stroke={DEPT_COLORS[a.department]?.bg ?? 'var(--muted)'}
                 strokeWidth={isActive ? 2 : 0.8}
                 strokeOpacity={isActive ? 0.6 : 0.1}
                 strokeDasharray={isActive ? '8 4' : 'none'}
@@ -668,7 +686,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
                   y1={p1.y}
                   x2={p2.x}
                   y2={p2.y}
-                  stroke={DEPT_COLORS[dept]?.bg ?? '#999'}
+                  stroke={DEPT_COLORS[dept]?.bg ?? 'var(--muted)'}
                   strokeWidth={0.6}
                   strokeOpacity={0.08}
                 />
@@ -717,7 +735,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
             height: 44,
             borderRadius: 10,
             background: 'rgba(255,255,255,0.95)',
-            border: '2px solid #6b7280',
+            border: '2px solid var(--muted)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -726,7 +744,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
             boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
             fontSize: 10,
             fontWeight: 700,
-            color: '#374151',
+            color: 'var(--ink2)',
             cursor: 'grab',
           }}
         >
@@ -744,7 +762,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
             width: 84,
             height: 84,
             borderRadius: 42,
-            background: '#1e293b',
+            background: 'var(--canvas-line)',
             color: 'white',
             display: 'flex',
             flexDirection: 'column',
@@ -783,7 +801,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                background: dc?.bg ?? '#999',
+                background: dc?.bg ?? 'var(--muted)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -793,9 +811,9 @@ export function AgentsPage({ token }: Props): React.ReactElement {
                 cursor: isDrag ? 'grabbing' : 'grab',
                 zIndex: isDrag ? 30 : isSel ? 20 : 5,
                 boxShadow: isGlow
-                  ? `0 0 0 4px ${dc?.bg ?? '#999'}44, 0 0 20px ${dc?.bg ?? '#999'}88`
+                  ? `0 0 0 4px ${dc?.bg ?? 'var(--muted)'}44, 0 0 20px ${dc?.bg ?? 'var(--muted)'}88`
                   : isSel
-                    ? `0 0 0 3px white, 0 0 0 5px ${dc?.bg ?? '#999'}`
+                    ? `0 0 0 3px white, 0 0 0 5px ${dc?.bg ?? 'var(--muted)'}`
                     : '0 2px 6px rgba(0,0,0,0.3)',
                 transform: isDrag ? 'scale(1.15)' : isGlow ? 'scale(1.1)' : 'scale(1)',
                 transition: isDrag ? 'none' : 'transform 0.2s, box-shadow 0.2s',
@@ -812,8 +830,10 @@ export function AgentsPage({ token }: Props): React.ReactElement {
                   width: 10,
                   height: 10,
                   borderRadius: 5,
-                  background: '#10B981',
-                  border: '2px solid #0f172a',
+                  background: 'var(--ok)',
+                  // Rings the node against the war-room canvas; same token as the
+                  // canvas itself so the two can never drift apart.
+                  border: '2px solid var(--canvas)',
                 }}
               />
             </div>
@@ -840,7 +860,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
                   .slice(0, 50)
                   .map((item) => {
                     const dc = agents?.find((a) => a.name === item.agentName);
-                    const deptColor = DEPT_COLORS[dc?.department ?? '']?.bg ?? '#999';
+                    const deptColor = DEPT_COLORS[dc?.department ?? '']?.bg ?? 'var(--muted)';
                     const isFail =
                       item.action.includes('exception') ||
                       item.action.includes('failed') ||
@@ -944,7 +964,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
                   width: 32,
                   height: 32,
                   borderRadius: 16,
-                  background: DEPT_COLORS[historyAgent.department]?.bg ?? '#999',
+                  background: DEPT_COLORS[historyAgent.department]?.bg ?? 'var(--muted)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -984,7 +1004,7 @@ export function AgentsPage({ token }: Props): React.ReactElement {
                   {runs.map((r) => (
                     <tr
                       key={r.id}
-                      style={{ background: r.status === 'failed' ? '#fef2f2' : undefined }}
+                      style={{ background: r.status === 'failed' ? 'var(--block-bg)' : undefined }}
                     >
                       <td style={styles.td}>
                         <span style={pill(r.status === 'success' ? colors.success : colors.danger)}>

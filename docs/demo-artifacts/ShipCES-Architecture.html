@@ -1,0 +1,119 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ShipCES Architecture + Agent Map</title>
+<style>
+  :root{--navy:#1a365d;--blue:#2b6cb0;--slate:#4a5568;--gray:#718096;--border:#e2e8f0;--bgalt:#f7fafc;}
+  body{margin:0;padding:24px 0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#2d3748;}
+  .wrap{max-width:980px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.08);}
+  header{background:var(--navy);color:#fff;padding:24px 28px;}
+  header .eyebrow{color:#9ec5e8;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:700;}
+  header h1{margin:6px 0 0;font-size:24px;font-weight:800;}
+  header .sub{color:#cbd9e8;font-size:13px;margin-top:6px;}
+  .pad{padding:22px 28px;}
+  h2{font-size:17px;font-weight:800;color:var(--navy);margin:24px 0 4px;border-top:1px solid var(--border);padding-top:20px;}
+  h2:first-of-type{border-top:none;padding-top:0;margin-top:0;}
+  .muted{color:var(--gray);font-size:12.5px;margin:2px 0 12px;}
+  .diagram{background:var(--bgalt);border:1px solid var(--border);border-radius:10px;padding:14px;overflow-x:auto;}
+  .fallback{font-family:Consolas,Menlo,monospace;font-size:12px;white-space:pre;color:var(--slate);}
+  .foot{border-top:1px solid var(--border);padding:14px 28px 22px;font-size:11px;color:var(--gray);}
+  code{font-family:Consolas,Menlo,monospace;background:var(--bgalt);padding:1px 5px;border-radius:4px;}
+</style></head>
+<body><div class="wrap">
+<header><div class="eyebrow">ShipCES Autonomous Brokerage</div><h1>Architecture + agent map</h1>
+<div class="sub">Refreshed to match the shipped services/* code. Source of truth: ADR-001 and services/oms/src/schema/shipment.v1.ts. Gate-1 exit criterion: diagrams match code.</div></header>
+<div class="pad">
+
+<h2>1. Layered architecture (own the brain, rent the senses)</h2>
+<div class="muted">Four domain layers hold the logic; the Sense Layer adapters are engine-swappable. EDI 910 tender OMS to TMS, EDI 214 milestones inside TMS, EDI 210 invoice BMS to customer.</div>
+<div class="diagram"><pre class="mermaid">
+flowchart LR
+  EMAIL_IN([Broker RFQ email]):::ext
+  CUST([Customer]):::ext
+  subgraph BRAIN[Own the brain: four domain layers]
+    direction LR
+    RMS["RMS<br/>Email + RFQ intake"]:::rms
+    OMS["OMS<br/>Order staging + tender"]:::oms
+    TMS["TMS<br/>Transportation lifecycle"]:::tms
+    BMS["BMS<br/>Billing + invoice"]:::bms
+  end
+  subgraph SENSE[Rent the senses: engine-swappable adapters]
+    direction LR
+    DAT["DAT<br/>capacity + rates"]:::sense
+    FMCSA["FMCSA<br/>authority + insurance"]:::sense
+    SYL["Sylectus<br/>post only"]:::sense
+    EMAILA["Email<br/>RFQ intake"]:::sense
+  end
+  EMAIL_IN --> EMAILA --> RMS
+  RMS -->|canonical RFQ| OMS
+  OMS -->|EDI 910 load tender| TMS
+  TMS -->|Delivered, Bill-Ready record| BMS
+  BMS -->|EDI 210 invoice| CUST
+  DAT -->|sourcing| TMS
+  FMCSA -->|vetting gate| TMS
+  SYL -->|reply catchment| TMS
+  classDef ext fill:#ffffff,stroke:#718096,color:#4a5568;
+  classDef sense fill:#f7fafc,stroke:#718096,color:#1a365d;
+  classDef rms fill:#ebf3fb,stroke:#2b6cb0,color:#1a365d;
+  classDef oms fill:#e9f7ef,stroke:#38a169,color:#1a365d;
+  classDef tms fill:#fff5eb,stroke:#dd6b20,color:#1a365d;
+  classDef bms fill:#fdecea,stroke:#e53e3e,color:#1a365d;
+</pre></div>
+
+<h2>2. Lifecycle state machine (canonical shipment record, 15 states)</h2>
+<div class="muted">LIFECYCLE_STATES verbatim. OMS owns RECEIVED..TENDERED, TMS owns SOURCING..DELIVERED, BMS owns BILL_READY..INVOICED. Every transition is audited.</div>
+<div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> RECEIVED
+  RECEIVED --> PARSED: parse
+  PARSED --> PRICED: price
+  PRICED --> QUOTE_SENT: send_quote
+  QUOTE_SENT --> WON: win
+  QUOTE_SENT --> LOST: lose
+  WON --> TENDERED: tender
+  TENDERED --> SOURCING: accept (EDI 910)
+  SOURCING --> CARRIER_ASSIGNED: assign_carrier
+  CARRIER_ASSIGNED --> DISPATCHED: 214 X3
+  DISPATCHED --> IN_TRANSIT: 214 AF
+  IN_TRANSIT --> DELIVERED: 214 D1
+  DELIVERED --> BILL_READY: bill_ready
+  BILL_READY --> INVOICED: invoice (EDI 210)
+  LOST --> [*]
+  INVOICED --> [*]
+  EXCEPTION --> RECEIVED: reopen
+</pre></div>
+
+<h2>3. Agents by department (12 in the registry)</h2>
+<div class="muted">From AGENT_REGISTRY in services/carrier/src/api/router.ts, served at GET /api/v1/agents.</div>
+<div class="diagram"><pre class="mermaid">
+flowchart TB
+  subgraph QUOTING[Quoting]
+    Q1["Quoting Agent<br/>prices RFQs (dir 200)"]:::a
+  end
+  subgraph PROC[Procurement]
+    P1["Procurement Agent<br/>auto-assigns carriers (dir 210)"]:::a
+    P2["Capacity Shortage<br/>detects stuck shipments (dir 210)"]:::a
+  end
+  subgraph EXEC[Execution]
+    E1["Tracking Agent<br/>milestone progression (dir 211)"]:::a
+  end
+  subgraph DOCS[Documents]
+    D1["Document Agent<br/>BOL extraction (dir 212)"]:::a
+  end
+  subgraph FIN[Financials]
+    F1["Rate Audit Agent<br/>margin check (dir 220)"]:::a
+    F2["Invoice Agent<br/>auto-invoice (dir 220)"]:::a
+    F3["Payment Match Agent<br/>three-way match (dir 230)"]:::a
+    F4["Settlement Agent<br/>carrier payment queue (dir 230)"]:::a
+    F5["Dispute Agent<br/>auto-resolve under 5% (dir 230)"]:::a
+  end
+  subgraph OPS[Operations]
+    O1["Health Monitor<br/>KPI thresholds (dir 190)"]:::a
+    O2["Admin Activity<br/>admin KPI thresholds (dir 060)"]:::a
+  end
+  classDef a fill:#ebf3fb,stroke:#2b6cb0,color:#1a365d;
+</pre></div>
+
+</div>
+<div class="foot">Rendered with Mermaid. If the diagrams show as text (offline), the same source lives in <code>docs/diagrams/architecture-c4.md</code> and <code>docs/diagrams/agent-map.md</code>, which render in VSCode and GitHub. No em-dashes or en-dashes.</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>try{mermaid.initialize({startOnLoad:true,theme:'neutral'});}catch(e){}</script>
+</body></html>

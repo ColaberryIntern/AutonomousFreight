@@ -1,0 +1,147 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ShipCES Jul 16 demo</title>
+<style>
+  :root{--navy:#1a365d;--blue:#2b6cb0;--green:#38a169;--amber:#dd6b20;--red:#e53e3e;--slate:#4a5568;--gray:#718096;--border:#e2e8f0;--bgalt:#f7fafc;}
+  *{box-sizing:border-box;} body{margin:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#2d3748;line-height:1.5;}
+  .wrap{max-width:960px;margin:0 auto;background:#fff;box-shadow:0 1px 8px rgba(0,0,0,.1);}
+  .hero{background:var(--navy);color:#fff;padding:30px 34px;}
+  .hero .eyebrow{color:#9ec5e8;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:700;}
+  .hero h1{margin:8px 0 0;font-size:28px;font-weight:800;}
+  .hero .sub{color:#cbd9e8;font-size:14px;margin-top:8px;max-width:720px;}
+  .hero .run{margin-top:12px;font-family:Consolas,Menlo,monospace;font-size:12px;color:#9ec5e8;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:7px 10px;display:inline-block;}
+  .agenda{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--border);padding:10px 34px;display:flex;flex-wrap:wrap;gap:6px;}
+  .agenda a{font-size:11px;font-weight:700;color:var(--navy);background:var(--bgalt);border:1px solid var(--border);border-radius:20px;padding:4px 11px;text-decoration:none;}
+  .agenda a:hover{background:#ebf3fb;border-color:#cfe0f2;color:var(--blue);}
+  .band{padding:8px 34px;background:var(--bgalt);border-bottom:1px solid var(--border);}
+  .band h2{margin:10px 0 4px;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--slate);}
+  .pad{padding:20px 34px;}
+  .seg{border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:16px;overflow:hidden;}
+  .seg .sh{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:#fbfdff;}
+  .seg .n{flex:none;width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;}
+  .seg .t{font-size:15px;font-weight:800;color:var(--navy);}
+  .seg .b{padding:14px 16px;}
+  .gwt{font-size:12.5px;color:var(--slate);background:#f5f9fd;border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:8px 12px;margin-bottom:12px;}
+  .gwt b{color:var(--navy);}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;font-size:13px;}
+  .kv .k{color:var(--gray);font-weight:600;} .kv .v{color:var(--navy);font-weight:600;}
+  table{width:100%;border-collapse:collapse;font-size:13px;} th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--navy);color:#fff;font-weight:700;font-size:12px;} tr:nth-child(even) td{background:var(--bgalt);}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;} .total td{font-weight:800;color:var(--navy);font-size:15px;background:#fff;border-top:2px solid var(--navy);}
+  .chip{display:inline-block;background:#ebf3fb;color:var(--blue);border:1px solid #cfe0f2;border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:700;margin:2px 4px 2px 0;} .chip.lead{background:var(--blue);color:#fff;}
+  .pill{display:inline-block;color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:9px;}
+  .mono{font-family:Consolas,Menlo,monospace;font-size:12px;color:var(--slate);}
+  .diagram{background:var(--bgalt);border:1px solid var(--border);border-radius:10px;padding:14px;overflow-x:auto;margin-bottom:14px;}
+  .foot{border-top:1px solid var(--border);padding:16px 34px 26px;font-size:11.5px;color:var(--gray);}
+  @media(max-width:640px){.kv{grid-template-columns:1fr;}}
+</style></head>
+<body><div class="wrap">
+<div class="hero">
+  <div class="eyebrow">ShipCES Autonomous Brokerage</div>
+  <h1>Jul 16 demo: one email becomes a paid invoice, no humans</h1>
+  <div class="sub">Thursday Jul 16, 10:00 CST. Two tracks run in parallel and meet in the middle. Every value on this page is produced by the real services/* code, deterministically, and is test-pinned (invoice AF-INV-0001 = $2,982).</div>
+  <div class="run">npx ts-node --transpile-only scripts/shipces-demo/forwardTrackDemo.ts</div>
+</div>
+<nav class="agenda">
+  <a href="#s1">1. Email in</a><a href="#s2">2. Canonical RFQ</a><a href="#s3">3. Idempotency</a><a href="#s4">4. Tender (910)</a><a href="#s5">5. Invoice (210)</a><a href="#s6">6. Fail-closed</a><a href="#s7">7. Architecture</a>
+</nav>
+
+<div class="band"><h2>Forward track: RMS / W1 (email to tender)</h2></div>
+<div class="pad">
+  <div class="seg" id="s1"><div class="sh"><div class="n">1</div><div class="t">An inbound broker email lands</div></div><div class="b">
+    <div class="kv"><div class="k">From</div><div class="v">John Dispatcher &lt;dispatch@abcmfg.com&gt;</div><div class="k">Subject</div><div class="v">URGENT expedite - need a sprinter ASAP</div></div>
+    <div class="mono" style="margin-top:8px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;">Hi team, please quote from El Paso, TX to Detroit, MI. About 3,200 lbs, sprinter, we need it ASAP - line down. Thanks.</div>
+  </div></div>
+  <div class="seg" id="s2"><div class="sh"><div class="n">2</div><div class="t">Parsed into one canonical RFQ</div></div><div class="b">
+    <div class="gwt"><b>Given</b> the URGENT sprinter email; <b>When</b> it is ingested; <b>Then</b> one canonical RFQ is created with multi-option service types.</div>
+    <div class="kv">
+      <div class="k">rfqId</div><div class="v mono">rfq_5NZV31M8FQ659T13CRSFDG3D2D</div>
+      <div class="k">Lane</div><div class="v">El Paso, TX to Detroit, MI</div>
+      <div class="k">Equipment</div><div class="v">SPRINTER</div>
+      <div class="k">Weight</div><div class="v">3,200 lb (General freight)</div>
+      <div class="k">Confidence</div><div class="v">0.9 &nbsp;<span class="pill" style="background:#38a169;">status NEW</span></div>
+      <div class="k">Human review</div><div class="v">not needed</div>
+    </div>
+    <div style="margin-top:12px;"><div class="k" style="color:#718096;font-weight:600;font-size:12px;margin-bottom:4px;">Service-type options (Karun D6 multi-option inference)</div><span class="chip lead">EXPEDITE_EXCLUSIVE</span><span class="chip">EXPEDITE_SOLO</span><span class="chip">EXPEDITE_TEAM</span><span class="chip">ELTL</span><span class="chip">FTL</span></div>
+  </div></div>
+  <div class="seg" id="s3"><div class="sh"><div class="n">3</div><div class="t">The same email cannot create a second load</div></div><div class="b">
+    <div class="gwt"><b>Given</b> the identical email arrives again; <b>When</b> it is ingested; <b>Then</b> it returns <b>duplicate</b> with the same rfqId. No duplicate quote, no duplicate row.</div>
+    <div class="kv"><div class="k">Result</div><div class="v"><span class="pill" style="background:#dd6b20;">duplicate</span></div><div class="k">rfqId</div><div class="v mono">rfq_5NZV31M8FQ659T13CRSFDG3D2D</div><div class="k">Idempotency key</div><div class="v mono">email_00de6b43ae4dcb3dc6fd14...</div></div>
+  </div></div>
+  <div class="seg" id="s4"><div class="sh"><div class="n">4</div><div class="t">Staged, priced, won, tendered to transportation</div></div><div class="b">
+    <div class="gwt"><b>Given</b> a won RFQ; <b>When</b> OMS stages and prices it; <b>Then</b> the shipment walks to TENDERED and an EDI 910 load tender is emitted only from WON.</div>
+    <div class="kv"><div class="k">State</div><div class="v"><span class="pill" style="background:#2b6cb0;">TENDERED</span></div><div class="k">EDI 910 tender</div><div class="v mono">load AF-99ZRQ5S6, SPRINTER, 3,200 lb</div><div class="k">Sell rate</div><div class="v">$2,400 linehaul</div></div>
+  </div></div>
+</div>
+
+<div class="band"><h2>Backward track: BMS (delivered load bills itself, on fake data)</h2></div>
+<div class="pad">
+  <div class="seg" id="s5"><div class="sh"><div class="n">5</div><div class="t">Invoice AF-INV-0001 (EDI 210)</div></div><div class="b">
+    <div class="gwt"><b>Given</b> a delivered shipment with a POD; <b>When</b> BMS runs; <b>Then</b> invoice AF-INV-0001 is produced (linehaul + 18% fuel + detention = $2,982).</div>
+    <div class="kv" style="margin-bottom:10px;"><div class="k">Customer</div><div class="v mono">cust_5ET652F76BR77X323SE5M8270K</div><div class="k">Load reference</div><div class="v mono">AF-99ZRQ5S6</div><div class="k">POD</div><div class="v mono">POD-DEMO-0725</div></div>
+    <table><tr><th style="width:80px;">Code</th><th>Description</th><th class="num" style="width:130px;">Amount</th></tr><tr><td class="mono">400</td><td>Linehaul</td><td class="num">$2,400</td></tr><tr><td class="mono">FUE</td><td>Fuel surcharge (18%)</td><td class="num">$432</td></tr><tr><td class="mono">ACC</td><td>Detention (2 hr)</td><td class="num">$150</td></tr><tr class="total"><td></td><td>TOTAL DUE</td><td class="num">$2,982</td></tr></table>
+  </div></div>
+  <div class="seg" id="s6"><div class="sh"><div class="n">6</div><div class="t">With no linehaul, it refuses to issue</div></div><div class="b">
+    <div class="gwt"><b>Given</b> a Bill-Ready record with no rate; <b>When</b> BMS tries to bill it; <b>Then</b> it does not guess or issue a zero invoice. It fails closed.</div>
+    <div class="mono" style="background:#fff5f5;border:1px solid #fed7d7;border-radius:8px;padding:10px 12px;color:#e53e3e;">Error: cannot invoice: no linehaul rate on Bill-Ready record or params</div>
+  </div></div>
+</div>
+
+<div class="band"><h2>Architecture (own the brain, rent the senses)</h2></div>
+<div class="pad" id="s7">
+  <div class="diagram"><pre class="mermaid">
+flowchart LR
+  EMAIL_IN([Broker RFQ email]):::ext
+  CUST([Customer]):::ext
+  subgraph BRAIN[Own the brain: four domain layers]
+    direction LR
+    RMS["RMS"]:::rms
+    OMS["OMS"]:::oms
+    TMS["TMS"]:::tms
+    BMS["BMS"]:::bms
+  end
+  subgraph SENSE[Rent the senses: adapters]
+    direction LR
+    DAT["DAT"]:::sense
+    FMCSA["FMCSA"]:::sense
+    SYL["Sylectus"]:::sense
+    EMAILA["Email"]:::sense
+  end
+  EMAIL_IN --> EMAILA --> RMS
+  RMS -->|canonical RFQ| OMS
+  OMS -->|EDI 910 tender| TMS
+  TMS -->|Delivered, Bill-Ready| BMS
+  BMS -->|EDI 210 invoice| CUST
+  DAT -->|sourcing| TMS
+  FMCSA -->|vetting| TMS
+  SYL -->|reply catchment| TMS
+  classDef ext fill:#ffffff,stroke:#718096,color:#4a5568;
+  classDef sense fill:#f7fafc,stroke:#718096,color:#1a365d;
+  classDef rms fill:#ebf3fb,stroke:#2b6cb0,color:#1a365d;
+  classDef oms fill:#e9f7ef,stroke:#38a169,color:#1a365d;
+  classDef tms fill:#fff5eb,stroke:#dd6b20,color:#1a365d;
+  classDef bms fill:#fdecea,stroke:#e53e3e,color:#1a365d;
+</pre></div>
+  <div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> RECEIVED
+  RECEIVED --> PARSED: parse
+  PARSED --> PRICED: price
+  PRICED --> QUOTE_SENT: send_quote
+  QUOTE_SENT --> WON: win
+  QUOTE_SENT --> LOST: lose
+  WON --> TENDERED: tender
+  TENDERED --> SOURCING: accept
+  SOURCING --> CARRIER_ASSIGNED: assign_carrier
+  CARRIER_ASSIGNED --> DISPATCHED: 214 X3
+  DISPATCHED --> IN_TRANSIT: 214 AF
+  IN_TRANSIT --> DELIVERED: 214 D1
+  DELIVERED --> BILL_READY: bill_ready
+  BILL_READY --> INVOICED: invoice
+  LOST --> [*]
+  INVOICED --> [*]
+</pre></div>
+</div>
+<div class="foot">This IS the real code path (services/rms, oms, tms, bms, adapters), deterministic and test-pinned. It is NOT yet on live DAT data (mock engine, pending the DAT API), and the BMS field detail (accessorial codes, fuel model) is a scaffold pending Brett's invoice-anatomy walkthrough. No em-dashes or en-dashes.</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>try{mermaid.initialize({startOnLoad:true,theme:'neutral'});}catch(e){}</script>
+</body></html>

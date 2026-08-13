@@ -255,7 +255,7 @@ export function FinancialsPage({ token }: Props): React.ReactElement {
         )}
       </div>
 
-      <div style={{ ...styles.card, background: '#f8fafc' }}>
+      <div style={{ ...styles.card, background: 'var(--raised)' }}>
         <h3 style={styles.h3}>Automated audit pipeline</h3>
         <ul style={{ fontSize: 13, color: colors.textDim, margin: 0, paddingLeft: 20 }}>
           <li>Rate Audit Agent checks margin &ge; 5% before invoicing (directive 220)</li>

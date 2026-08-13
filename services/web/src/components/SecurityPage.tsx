@@ -258,7 +258,7 @@ export function SecurityPage({ token }: { token: string }): React.ReactElement {
         </div>
       </div>
 
-      <div style={{ ...styles.card, background: '#f8fafc' }}>
+      <div style={{ ...styles.card, background: 'var(--raised)' }}>
         <h3 style={styles.h3}>HTTP status codes in use (error handling)</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {[

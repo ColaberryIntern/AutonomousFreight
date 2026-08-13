@@ -28,7 +28,7 @@ const SEVERITY: Record<string, { label: string; color: string }> = {
   'agent.dispute.needs_review': { label: 'DISPUTE', color: colors.warn },
   'agent.procurement.blocked': { label: 'BLOCKED', color: colors.danger },
   'agent.procurement.needs_review': { label: 'NEEDS REVIEW', color: colors.warn },
-  'gate.soft_overridden': { label: 'OVERRIDDEN', color: '#8b5cf6' },
+  'gate.soft_overridden': { label: 'OVERRIDDEN', color: 'var(--cat4)' },
 };
 
 export function ErrorsPage({ token }: Props): React.ReactElement {
@@ -160,7 +160,7 @@ export function ErrorsPage({ token }: Props): React.ReactElement {
         )}
       </div>
 
-      <div style={{ ...styles.card, background: '#f8fafc' }}>
+      <div style={{ ...styles.card, background: 'var(--raised)' }}>
         <h3 style={styles.h3}>Error handling architecture</h3>
         <ul style={{ fontSize: 13, color: colors.textDim, margin: 0, paddingLeft: 20 }}>
           <li>Every agent has per-item try/catch — one failure never blocks another</li>

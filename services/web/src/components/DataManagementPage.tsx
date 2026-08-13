@@ -88,7 +88,7 @@ export function DataManagementPage({ token }: Props): React.ReactElement {
             {([
               ['Received', pipeline.received, colors.textMuted],
               ['Parsed', pipeline.parsed, colors.primary],
-              ['Priced', pipeline.priced, '#8b5cf6'],
+              ['Priced', pipeline.priced, 'var(--cat4)'],
               ['Sent', pipeline.sent, colors.warn],
               ['Won', pipeline.won, colors.success],
               ['Lost', pipeline.lost, colors.textMuted],
@@ -205,7 +205,7 @@ export function DataManagementPage({ token }: Props): React.ReactElement {
       </div>
 
       {/* Architecture note */}
-      <div style={{ ...styles.card, background: '#f8fafc' }}>
+      <div style={{ ...styles.card, background: 'var(--raised)' }}>
         <h3 style={styles.h3}>Data pipeline architecture</h3>
         <ul style={{ fontSize: 13, color: colors.textDim, margin: 0, paddingLeft: 20 }}>
           <li>RFQ ingestion: received &rarr; parsed &rarr; priced &rarr; sent &rarr; won/lost/exception</li>
